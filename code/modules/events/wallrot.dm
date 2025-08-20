@@ -1,31 +1,44 @@
-/datum/event/wallrot/setup()
-	announceWhen = rand(0, 300)
-	endWhen = announceWhen + 1
-
-/datum/event/wallrot/announce()
-	GLOB.event_announcement.Announce("Harmful fungi detected on station. Station structures may be contaminated.", "Biohazard Alert")
-
 /datum/event/wallrot/start()
-	spawn()
-		var/turf/simulated/wall/center = null
+	INVOKE_ASYNC(src, PROC_REF(spawn_wallrot))
 
-		// 100 attempts
-		for(var/i=0, i<100, i++)
-			var/turf/candidate = locate(rand(1, world.maxx), rand(1, world.maxy), 1)
-			if(istype(candidate, /turf/simulated/wall))
-				center = candidate
+/datum/event/wallrot/proc/apply_to_turf(turf/T)
+	var/turf/simulated/wall/W = T
+	W.rot()
 
-		if(center)
-			// Make sure at least one piece of wall rots!
-			center.rot()
+/datum/event/wallrot/proc/is_valid_candidate(turf/T)
+	return TRUE
 
-			// Have a chance to rot lots of other walls.
-			var/rotcount = 0
-			var/actual_severity = severity * rand(5, 10)
-			for(var/turf/simulated/wall/W in range(5, center)) if(prob(50))
-				W.rot()
-				rotcount++
+/datum/event/wallrot/proc/spawn_wallrot()
+	var/turf/simulated/wall/center = null
 
-				// Only rot up to severity walls
-				if(rotcount >= actual_severity)
-					break
+	// 100 attempts
+	for(var/i in 0 to 100)
+		var/turf/candidate = locate(rand(1, world.maxx), rand(1, world.maxy), level_name_to_num(MAIN_STATION))
+		if(iswallturf(candidate) && is_valid_candidate(candidate))
+			center = candidate
+			break
+
+	if(!center)
+		return
+	// Make sure at least one piece of wall rots!
+	apply_to_turf(center)
+
+	// Have a chance to rot lots of other walls.
+	var/rotcount = 0
+	var/actual_severity = severity * rand(5, 10)
+	for(var/turf/simulated/wall/W in range(5, center))
+		if(prob(50))
+			apply_to_turf(W)
+			rotcount++
+
+			// Only rot up to severity walls
+			if(rotcount >= actual_severity)
+				break
+
+/datum/event/wallrot/fungus
+
+/datum/event/wallrot/fungus/is_valid_candidate(turf/T)
+	return istype(get_area(T), /area/station/maintenance)
+
+/datum/event/wallrot/fungus/apply_to_turf(turf/T)
+	new /obj/effect/decal/cleanable/fungus(T)

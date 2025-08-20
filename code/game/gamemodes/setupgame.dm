@@ -1,5 +1,5 @@
-/proc/getAssignedBlock(var/name,var/list/blocksLeft, var/activity_bounds=DNA_DEFAULT_BOUNDS, var/good=0)
-	if(blocksLeft.len==0)
+/proc/getAssignedBlock(name, list/blocksLeft, activity_bounds=DNA_DEFAULT_BOUNDS, good=0)
+	if(!length(blocksLeft))
 		warning("[name]: No more blocks left to assign!")
 		return 0
 	var/assigned = pick(blocksLeft)
@@ -15,12 +15,6 @@
 	return assigned
 
 /proc/setupgenetics()
-
-	if(prob(50))
-		GLOB.blockadd = rand(-300,300)
-	if(prob(75))
-		GLOB.diffmut = rand(0,20)
-
 
 //Thanks to nexis for the fancy code
 // BITCH I AIN'T DONE YET
@@ -40,21 +34,22 @@
 	GLOB.hulkblock          = getAssignedBlock("HULK",          numsToAssign, DNA_HARD_BOUNDS, good=1)
 	GLOB.teleblock          = getAssignedBlock("TELE",          numsToAssign, DNA_HARD_BOUNDS, good=1)
 	GLOB.fireblock          = getAssignedBlock("FIRE",          numsToAssign, DNA_HARDER_BOUNDS, good=1)
-	GLOB.xrayblock          = getAssignedBlock("XRAY",          numsToAssign, DNA_HARDER_BOUNDS, good=1)
 	GLOB.clumsyblock        = getAssignedBlock("CLUMSY",        numsToAssign)
 	GLOB.fakeblock          = getAssignedBlock("FAKE",          numsToAssign)
 	GLOB.coughblock         = getAssignedBlock("COUGH",         numsToAssign)
 	GLOB.glassesblock       = getAssignedBlock("GLASSES",       numsToAssign)
 	GLOB.epilepsyblock      = getAssignedBlock("EPILEPSY",      numsToAssign)
-	GLOB.twitchblock        = getAssignedBlock("TWITCH",        numsToAssign)
 	GLOB.nervousblock       = getAssignedBlock("NERVOUS",       numsToAssign)
 	GLOB.wingdingsblock     = getAssignedBlock("WINGDINGS",     numsToAssign)
+	GLOB.mesonblock			= getAssignedBlock("MESONS",        numsToAssign, good=1)
+	GLOB.noflashblock		= getAssignedBlock("NOFLASH",       numsToAssign, DNA_HARDER_BOUNDS, good=1)
+	GLOB.nightvisionblock	= getAssignedBlock("NIGHTVISION",   numsToAssign, DNA_HARDER_BOUNDS, good=1)
+
 
 	// Bay muts
 	GLOB.breathlessblock    = getAssignedBlock("BREATHLESS",    numsToAssign, DNA_HARD_BOUNDS, good=1)
 	GLOB.remoteviewblock    = getAssignedBlock("REMOTEVIEW",    numsToAssign, DNA_HARDER_BOUNDS, good=1)
 	GLOB.regenerateblock    = getAssignedBlock("REGENERATE",    numsToAssign, DNA_HARDER_BOUNDS, good=1)
-	GLOB.increaserunblock   = getAssignedBlock("INCREASERUN",   numsToAssign, DNA_HARDER_BOUNDS, good=1)
 	GLOB.remotetalkblock    = getAssignedBlock("REMOTETALK",    numsToAssign, DNA_HARDER_BOUNDS, good=1)
 	GLOB.morphblock         = getAssignedBlock("MORPH",         numsToAssign, DNA_HARDER_BOUNDS, good=1)
 	GLOB.coldblock          = getAssignedBlock("COLD",          numsToAssign, good=1)
@@ -62,7 +57,6 @@
 	GLOB.noprintsblock      = getAssignedBlock("NOPRINTS",      numsToAssign, DNA_HARD_BOUNDS, good=1)
 	GLOB.shockimmunityblock = getAssignedBlock("SHOCKIMMUNITY", numsToAssign, good=1)
 	GLOB.smallsizeblock     = getAssignedBlock("SMALLSIZE",     numsToAssign, DNA_HARD_BOUNDS, good=1)
-
 	//
 	// Goon muts
 	/////////////////////////////////////////////
@@ -70,6 +64,7 @@
 	// Disabilities
 	GLOB.lispblock      = getAssignedBlock("LISP",       numsToAssign)
 	GLOB.muteblock      = getAssignedBlock("MUTE",       numsToAssign)
+	GLOB.paraplegicblock= getAssignedBlock("PARAPLEGIC", numsToAssign)
 	GLOB.radblock       = getAssignedBlock("RAD",        numsToAssign)
 	GLOB.fatblock       = getAssignedBlock("FAT",        numsToAssign)
 	GLOB.chavblock      = getAssignedBlock("CHAV",       numsToAssign)
@@ -107,42 +102,31 @@
 	// Monkeyblock is always last.
 	GLOB.monkeyblock = DNA_SE_LENGTH
 
-	// And the genes that actually do the work. (domutcheck improvements)
+	// And the mutations that actually do the work. (domutcheck improvements)
 	var/list/blocks_assigned[DNA_SE_LENGTH]
-	for(var/gene_type in typesof(/datum/dna/gene))
-		var/datum/dna/gene/G = new gene_type
+	for(var/mutation_type in typesof(/datum/mutation))
+		var/datum/mutation/G = new mutation_type
 		if(G.block)
 			if(G.block in blocks_assigned)
 				warning("DNA2: Gene [G.name] trying to use already-assigned block [G.block] (used by [english_list(blocks_assigned[G.block])])")
-			GLOB.dna_genes.Add(G)
+			GLOB.dna_mutations[mutation_type] = G
 			var/list/assignedToBlock[0]
 			if(blocks_assigned[G.block])
-				assignedToBlock=blocks_assigned[G.block]
+				assignedToBlock = blocks_assigned[G.block]
 			assignedToBlock.Add(G.name)
-			blocks_assigned[G.block]=assignedToBlock
+			blocks_assigned[G.block] = assignedToBlock
 			//testing("DNA2: Gene [G.name] assigned to block [G.block].")
+		else
+			qdel(G)
 
-	// I WILL HAVE A LIST OF GENES THAT MATCHES THE RANDOMIZED BLOCKS GODDAMNIT!
-	for(var/block=1;block<=DNA_SE_LENGTH;block++)
+	// I WILL HAVE A LIST OF MUTATIONS THAT MATCHES THE RANDOMIZED BLOCKS GODDAMNIT!
+	for(var/block in 1 to DNA_SE_LENGTH)
 		var/name = GLOB.assigned_blocks[block]
-		for(var/datum/dna/gene/gene in GLOB.dna_genes)
-			if(gene.name == name || gene.block == block)
-				if(gene.block in GLOB.assigned_gene_blocks)
-					warning("DNA2: Gene [gene.name] trying to add to already assigned gene block list (used by [english_list(GLOB.assigned_gene_blocks[block])])")
-				GLOB.assigned_gene_blocks[block] = gene
+		for(var/mutation_type in GLOB.dna_mutations)
+			var/datum/mutation/mutation = GLOB.dna_mutations[mutation_type]
+			if(mutation.name == name || mutation.block == block)
+				if(mutation.block in GLOB.assigned_mutation_blocks)
+					warning("DNA2: Mutation [mutation.name] trying to add to already assigned gene block list (used by [english_list(GLOB.assigned_mutation_blocks[block])])")
+				GLOB.assigned_mutation_blocks[block] = mutation
 
-	//testing("DNA2: [numsToAssign.len] blocks are unused: [english_list(numsToAssign)]")
-
-/proc/setupcult()
-	var/static/datum/cult_info/picked_cult // Only needs to get picked once
-
-	if(picked_cult)
-		return picked_cult
-
-	var/random_cult = pick(typesof(/datum/cult_info))
-	picked_cult = new random_cult()
-
-	if(!picked_cult)
-		log_runtime(EXCEPTION("Cult datum creation failed"))
-	//todo:add adminonly datum var, check for said var here...
-	return picked_cult
+	//testing("DNA2: [length(numsToAssign)] blocks are unused: [english_list(numsToAssign)]")

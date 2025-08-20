@@ -1,12 +1,7 @@
 /datum/event/anomaly/anomaly_vortex
-	startWhen = 20
+	name = "Anomaly event"
+	startWhen = 10
 	announceWhen = 3
-	endWhen = 80
-
-/datum/event/anomaly/anomaly_vortex/announce()
-	GLOB.event_announcement.Announce("Localized high-intensity vortex anomaly detected on long range scanners. Expected location: [impact_area.name]", "Anomaly Alert")
-
-/datum/event/anomaly/anomaly_vortex/start()
-	var/turf/T = pick(get_area_turfs(impact_area))
-	if(T)
-		newAnomaly = new /obj/effect/anomaly/bhole(T.loc)
+	anomaly_path = /obj/effect/anomaly/bhole
+	prefix_message = "Localized high-intensity vortex anomaly detected on long range scanners."
+	announce_sound = 'sound/AI/anomaly_vortex.ogg'

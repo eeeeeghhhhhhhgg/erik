@@ -5,43 +5,36 @@
 	desc = "A wall mounted storage locker."
 	name = "wall locker"
 	icon = 'icons/obj/walllocker.dmi'
-	icon_state = "wall-locker"
-	density = 0
-	anchored = 1
-	icon_closed = "wall-locker"
-	icon_opened = "wall-lockeropen"
+	icon_state = null
+	door_anim_time = 0
+	enable_door_overlay = FALSE
+	density = FALSE
+	anchored = TRUE
+	icon_closed = null
+	icon_opened = null
 
 /obj/structure/closet/walllocker/close()
-	..()
-	density = 0 //It's a locker in a wall, you aren't going to be walking into it.
-
-//spawns endless (3 sets) amounts of breathmask, emergency oxy tank and crowbar
-
-/obj/structure/closet/walllocker/CtrlClick()
-	if(ishuman(usr) && Adjacent(usr))
-		verb_toggleopen()
+	. = ..()
+	density = FALSE //It's a locker in a wall, you aren't going to be walking into it.
 
 /obj/structure/closet/walllocker/emerglocker
 	name = "emergency locker"
-	desc = "A wall mounted locker with emergency supplies"
-	var/list/spawnitems = list(/obj/item/tank/emergency_oxygen,/obj/item/clothing/mask/breath,/obj/item/crowbar)
-	var/amount = 3 // spawns each items X times.
+	desc = "A wall mounted locker with emergency supplies."
 	icon_state = "emerg"
+	door_anim_time = 0
 	icon_closed = "emerg"
-	icon_opened = "emergopen"
+	icon_opened = "emerg_open"
 
-/obj/structure/closet/walllocker/emerglocker/attack_hand(mob/user as mob)
-	if(istype(user, /mob/living/silicon/ai))	//Added by Strumpetplaya - AI shouldn't be able to
-		return									//activate emergency lockers.  This fixes that.  (Does this make sense, the AI can't call attack_hand, can it? --Mloc)
-	if(!amount)
-		to_chat(usr, "<spawn class='notice'>It's empty.")
-		return
-	if(amount)
-		to_chat(usr, "<spawn class='notice'>You take out some items from \the [src].")
-		for(var/path in spawnitems)
-			new path(src.loc)
-		amount--
-	return
+/obj/structure/closet/walllocker/emerglocker/populate_contents()
+	new /obj/item/tank/internals/emergency_oxygen(src)
+	new /obj/item/tank/internals/emergency_oxygen(src)
+	new /obj/item/tank/internals/emergency_oxygen(src)
+	new /obj/item/clothing/mask/breath(src)
+	new /obj/item/clothing/mask/breath(src)
+	new /obj/item/clothing/mask/breath(src)
+	new /obj/item/crowbar(src)
+	new /obj/item/crowbar(src)
+	new /obj/item/crowbar(src)
 
 /obj/structure/closet/walllocker/emerglocker/north
 	pixel_y = 32

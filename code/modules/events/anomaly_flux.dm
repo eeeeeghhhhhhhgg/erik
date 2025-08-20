@@ -1,17 +1,7 @@
 /datum/event/anomaly/anomaly_flux
-	startWhen = 3
-	announceWhen = 20
-	endWhen = 180
-
-/datum/event/anomaly/anomaly_flux/announce()
-	GLOB.event_announcement.Announce("Localized hyper-energetic flux wave detected on long range scanners. Expected location: [impact_area.name].", "Anomaly Alert")
-
-/datum/event/anomaly/anomaly_flux/start()
-	var/turf/T = pick(get_area_turfs(impact_area))
-	if(T)
-		newAnomaly = new /obj/effect/anomaly/flux(T.loc)
-
-/datum/event/anomaly/anomaly_flux/end()
-	if(newAnomaly.loc)//If it hasn't been neutralized, it's time to blow up.
-		explosion(newAnomaly, -1, 3, 5, 5)
-		qdel(newAnomaly)
+	name = "Anomaly event"
+	startWhen = 10
+	announceWhen = 3
+	anomaly_path = /obj/effect/anomaly/flux
+	prefix_message = "Localized hyper-energetic flux wave detected on long range scanners."
+	announce_sound = 'sound/AI/anomaly_flux.ogg'

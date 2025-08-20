@@ -1,12 +1,14 @@
 /datum/game_mode/traitor/changeling
-	name = "traitor+changeling"
+	name = "traitor_changeling"
 	config_tag = "traitorchan"
 	traitors_possible = 3 //hard limit on traitors if scaling is turned off
-	restricted_jobs = list("AI", "Cyborg")
+	restricted_jobs = list("Cyborg")
+	secondary_restricted_jobs = list("AI") // Allows AI to roll traitor, but not changeling
 	required_players = 10
 	required_enemies = 1	// how many of each type are required
 	recommended_enemies = 3
-	var/protected_species_changeling = list("Machine")
+	secondary_enemies_scaling = 0.025
+	species_to_mindflayer = list("Machine")
 
 /datum/game_mode/traitor/changeling/announce()
 	to_chat(world, "<B>The current game mode is - Traitor+Changeling!</B>")
@@ -14,31 +16,30 @@
 
 
 /datum/game_mode/traitor/changeling/pre_setup()
-	if(config.protect_roles_from_antagonist)
+	if(GLOB.configuration.gamemode.prevent_mindshield_antags)
 		restricted_jobs += protected_jobs
 
 	var/list/datum/mind/possible_changelings = get_players_for_role(ROLE_CHANGELING)
+	secondary_enemies = CEILING((secondary_enemies_scaling * num_players()), 1)
 
-	for(var/mob/new_player/player in GLOB.player_list)
-		if((player.mind in possible_changelings) && (player.client.prefs.species in protected_species_changeling))
-			possible_changelings -= player.mind
-
-	if(possible_changelings.len > 0)
-		var/datum/mind/changeling = pick(possible_changelings)
-		changelings += changeling
-		modePlayer += changelings
-		changeling.restricted_roles = restricted_jobs
-		changeling.special_role = SPECIAL_ROLE_CHANGELING
+	if(!length(possible_changelings))
 		return ..()
-	else
-		return 0
+
+	for(var/I in possible_changelings)
+		if((length(pre_changelings) + length(pre_mindflayers)) >= secondary_enemies)
+			break
+		var/datum/mind/changeling = pick_n_take(possible_changelings)
+		changeling.restricted_roles = (restricted_jobs + secondary_restricted_jobs)
+		if(changeling.current?.client?.prefs.active_character.species in species_to_mindflayer)
+			pre_mindflayers += changeling
+			changeling.special_role = SPECIAL_ROLE_MIND_FLAYER
+			continue
+		pre_changelings += changeling
+		changeling.special_role = SPECIAL_ROLE_CHANGELING
+
+	return ..()
 
 /datum/game_mode/traitor/changeling/post_setup()
-	for(var/datum/mind/changeling in changelings)
-		grant_changeling_powers(changeling.current)
-		changeling.special_role = SPECIAL_ROLE_CHANGELING
-		forge_changeling_objectives(changeling)
-		greet_changeling(changeling)
-		update_change_icons_added(changeling)
+	for(var/datum/mind/changeling as anything in pre_changelings)
+		changeling.add_antag_datum(/datum/antagonist/changeling)
 	..()
-	return

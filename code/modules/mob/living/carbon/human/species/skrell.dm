@@ -2,20 +2,18 @@
 	name = "Skrell"
 	name_plural = "Skrell"
 	icobase = 'icons/mob/human_races/r_skrell.dmi'
-	deform = 'icons/mob/human_races/r_def_skrell.dmi'
 	language = "Skrellian"
 	primitive_form = /datum/species/monkey/skrell
 
-	blurb = "An amphibious species, Skrell come from the star system known as Qerr'Vallis, which translates to 'Star of \
-	the royals' or 'Light of the Crown'.<br/><br/>Skrell are a highly advanced and logical race who live under the rule \
-	of the Qerr'Katish, a caste within their society which keeps the empire of the Skrell running smoothly. Skrell are \
-	herbivores on the whole and tend to be co-operative with the other species of the galaxy, although they rarely reveal \
-	the secrets of their empire to their allies."
+	blurb = "Skrell are an amphibious species, that come from the planet Jargon 4, a humid planet filled with swamps and archipelagos. \
+	Skrell are a highly advanced and logical race who live under the rule of the Qerr'Katish, the main governmental body.<br/><br/> \
+	Skrell are herbivores and opulent in nature thanks to central tenets of the Skrellian religion. \
+	While classically preferring diplomacy, the Skrell participate in the largest military alliance in the galaxy, the Solar-Central Compact."
 
-
-	species_traits = list(LIPS)
+	species_traits = list(LIPS, NO_HAIR)
+	inherent_traits = list(TRAIT_NOFAT, TRAIT_WATERBREATH)
 	clothing_flags = HAS_UNDERWEAR | HAS_UNDERSHIRT | HAS_SOCKS
-	bodyflags = HAS_SKIN_COLOR | HAS_BODY_MARKINGS
+	bodyflags = HAS_SKIN_COLOR | HAS_BODY_MARKINGS | SHAVED
 	dietflags = DIET_HERB
 	taste_sensitivity = TASTE_SENSITIVITY_DULL
 	flesh_color = "#8CD7A3"
@@ -46,10 +44,4 @@
 		"makes like a fish and suffocates!",
 		"is strangling themselves with their own tendrils!")
 
-/datum/species/skrell/on_species_gain(mob/living/carbon/human/H)
-	..()
-	ADD_TRAIT(H, TRAIT_WATERBREATH, "species")
-
-/datum/species/skrell/on_species_loss(mob/living/carbon/human/H)
-	..()
-	REMOVE_TRAIT(H, TRAIT_WATERBREATH, "species")
+	plushie_type = /obj/item/toy/plushie/skrellplushie

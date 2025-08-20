@@ -21,6 +21,32 @@
 	data["emotions"] = emotions
 	data["current_emotion"] = user.card.current_emotion
 
+	var/list/speech_types = list()
+	for(var/name in user.possible_say_verbs)
+		var/list/speech = list()
+		speech["name"] = name
+		speech["id"] = length(speech_types)
+		speech_types[++speech_types.len] = speech
+
+	data["current_speech_verb"] = user.speech_state
+	data["speech_verbs"] = speech_types
+
+	var/list/chassis_choices = list()
+	var/list/chassises_to_add = list()
+
+	chassis_choices = user.possible_chassis.Copy()
+	if(user.custom_sprite)
+		chassis_choices["Custom"] = "[user.ckey]-pai"
+	for(var/name in chassis_choices)
+		var/list/chassis_to_update_with = list()
+		chassis_to_update_with["name"] = name
+		chassis_to_update_with["icon"] = chassis_choices[name]
+		chassis_to_update_with["id"] = length(chassis_to_update_with)
+		chassises_to_add[++chassises_to_add.len] = chassis_to_update_with
+
+	data["available_chassises"] = chassises_to_add
+	data["current_chassis"] = user.chassis
+
 	var/list/available_s = list()
 	for(var/s in GLOB.pai_software_by_key)
 		var/datum/pai_software/PS = GLOB.pai_software_by_key[s]
@@ -42,7 +68,7 @@
 
 	return data
 
-/datum/pai_software/main_menu/tgui_act(action, list/params)
+/datum/pai_software/main_menu/ui_act(action, list/params)
 	if(..())
 		return
 
@@ -64,6 +90,20 @@
 			var/toggle_key = params["toggle_key"]
 			if(pai_holder.installed_software[toggle_key])
 				pai_holder.installed_software[toggle_key].toggle(pai_holder)
+		if("setSpeechStyle")
+			pai_holder.speech_state = params["speech_state"]
+			var/list/sayverbs = pai_holder.possible_say_verbs[pai_holder.speech_state]
+			pai_holder.speak_statement = sayverbs[1]
+			pai_holder.speak_exclamation = sayverbs[length(sayverbs) > 1 ? 2 : length(sayverbs)]
+			pai_holder.speak_query = sayverbs[length(sayverbs) > 2 ? 3 : length(sayverbs)]
+		if("setChassis")
+			pai_holder.chassis = params["chassis_to_change"]
+			pai_holder.icon_state = pai_holder.chassis
+			if(pai_holder.icon_state == "[pai_holder.ckey]-pai")
+				pai_holder.icon = 'icons/mob/custom_synthetic/custom-synthetic.dmi'
+			else
+				pai_holder.icon = 'icons/mob/pai.dmi'
+
 
 // Directives //
 /datum/pai_software/directives
@@ -83,7 +123,7 @@
 
 	return data
 
-/datum/pai_software/directives/tgui_act(action, list/params)
+/datum/pai_software/directives/ui_act(action, list/params)
 	if(..())
 		return
 
@@ -96,7 +136,7 @@
 				return
 
 			// Check the carrier
-			var/answer = alert(M, "[pai_holder] is requesting a DNA sample from you. Will you allow it to confirm your identity?", "[pai_holder] Check DNA", "Yes", "No")
+			var/answer = tgui_alert(M, "[pai_holder] is requesting a DNA sample from you. Will you allow it to confirm your identity?", "[pai_holder] Check DNA", list("Yes", "No"))
 			if(answer == "Yes")
 				M.visible_message("<span class='notice'>[M] presses [M.p_their()] thumb against [pai_holder].</span>", "<span class='notice'>You press your thumb against [pai_holder].</span>")
 				var/datum/dna/dna = M.dna
@@ -111,8 +151,8 @@
 // Crew Manifest //
 /datum/pai_software/crew_manifest
 	name = "Crew Manifest"
-	ram_cost = 5
 	id = "manifest"
+	default = TRUE
 	template_file = "pai_manifest"
 	ui_icon = "users"
 
@@ -140,11 +180,11 @@
 	integrated_records.update_ui(user, data)
 	return data
 
-/datum/pai_software/med_records/tgui_act(action, list/params, datum/tgui/ui, datum/tgui_state/state)
+/datum/pai_software/med_records/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	if(..())
 		return
 	// Double proxy here
-	integrated_records.tgui_act(action, params, ui, state)
+	integrated_records.ui_act(action, params, ui, state)
 
 // Sec Records //
 /datum/pai_software/sec_records
@@ -162,11 +202,11 @@
 	integrated_records.update_ui(user, data)
 	return data
 
-/datum/pai_software/sec_records/tgui_act(action, list/params, datum/tgui/ui, datum/tgui_state/state)
+/datum/pai_software/sec_records/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	if(..())
 		return
 	// Double proxy here
-	integrated_records.tgui_act(action, params, ui, state)
+	integrated_records.ui_act(action, params, ui, state)
 
 // Atmos Scan //
 /datum/pai_software/atmosphere_sensor
@@ -187,8 +227,8 @@
 // Messenger //
 /datum/pai_software/messenger
 	name = "Digital Messenger"
-	ram_cost = 5
 	id = "messenger"
+	default = TRUE
 	template_file = "pai_messenger"
 	ui_icon = "envelope"
 
@@ -208,14 +248,14 @@
 
 	return data
 
-/datum/pai_software/messenger/tgui_act(action, list/params, datum/tgui/ui, datum/tgui_state/state)
+/datum/pai_software/messenger/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	if(..())
 		return
 
 	// Grab their messenger
 	var/datum/data/pda/app/messenger/PM = pai_holder.pda.find_program(/datum/data/pda/app/messenger)
 	// Double proxy here
-	PM.tgui_act(action, params, ui, state)
+	PM.ui_act(action, params, ui, state)
 
 // Radio
 /datum/pai_software/radio_config
@@ -233,7 +273,7 @@
 	data["broadcasting"] = user.radio.broadcasting
 	return data
 
-/datum/pai_software/radio_config/tgui_act(action, list/params)
+/datum/pai_software/radio_config/ui_act(action, list/params)
 	if(..())
 		return
 
@@ -257,27 +297,27 @@
 /datum/pai_software/signaler/get_app_data(mob/living/silicon/pai/user)
 	var/list/data = list()
 
-	data["frequency"] = user.sradio.frequency
-	data["code"] = user.sradio.code
+	data["frequency"] = user.integ_signaler.frequency
+	data["code"] = user.integ_signaler.code
 	data["minFrequency"] = PUBLIC_LOW_FREQ
 	data["maxFrequency"] = PUBLIC_HIGH_FREQ
 
 	return data
 
-/datum/pai_software/signaler/tgui_act(action, list/params)
+/datum/pai_software/signaler/ui_act(action, list/params)
 	if(..())
 		return
 
 	switch(action)
 		if("signal")
-			pai_holder.sradio.send_signal("ACTIVATE")
+
+			pai_holder.integ_signaler.activate()
 
 		if("freq")
-			var/new_frequency = sanitize_frequency(text2num(params["freq"]) * 10)
-			pai_holder.sradio.set_frequency(new_frequency)
+			pai_holder.integ_signaler.frequency = sanitize_frequency(text2num(params["freq"]) * 10)
 
 		if("code")
-			pai_holder.sradio.code = clamp(text2num(params["code"]), 1, 100)
+			pai_holder.integ_signaler.code = clamp(text2num(params["code"]), 1, 100)
 
 // Door Jack //
 /datum/pai_software/door_jack
@@ -305,7 +345,7 @@
 
 	return data
 
-/datum/pai_software/door_jack/tgui_act(action, list/params)
+/datum/pai_software/door_jack/ui_act(action, list/params)
 	if(..())
 		return
 
@@ -317,16 +357,17 @@
 					to_chat(usr, "<span class='warning'>You are already hacking that door!</span>")
 				else
 					hacking = TRUE
-					INVOKE_ASYNC(src, /datum/pai_software/door_jack/.proc/hackloop)
+					INVOKE_ASYNC(src, PROC_REF(hackloop))
 		if("cancel")
 			hackdoor = null
 		if("cable")
-			if(cable)
-				to_chat(usr, "<span class='warning'>You already have a cable deployed!</span>")
-				return
-			var/turf/T = get_turf(pai_holder)
-			cable = new /obj/item/pai_cable(T)
-			pai_holder.visible_message("<span class='warning'>A port on [pai_holder] opens to reveal [cable], which promptly falls to the floor.</span>")
+			playsound(pai_holder, 'sound/mecha/mechmove03.ogg', 25, TRUE)
+			if(cable) // Retracting
+				pai_holder.visible_message("<span class='warning'>[cable] is pulled back into [pai_holder] with a quick snap.</span>")
+				QDEL_NULL(cable)
+			else // Extending
+				cable = new /obj/item/pai_cable(get_turf(pai_holder))
+				pai_holder.visible_message("<span class='warning'>A port on [pai_holder] opens to reveal [cable], which promptly falls to the floor.</span>")
 
 /**
   * Door jack hack loop

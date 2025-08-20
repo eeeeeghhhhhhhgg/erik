@@ -7,11 +7,13 @@
 	icon_living = "kangaroo"
 	icon_dead = "kangaroo_dead"
 	icon_gib = "kangaroo_dead"
+	mob_biotypes = MOB_ORGANIC | MOB_BEAST
 	turns_per_move = 8
 	response_help = "pets"
 	emote_hear = list("bark")
 	maxHealth = 150
 	health = 150
+	butcher_results = list(/obj/item/food/meat/kangaroo = 6)
 	harm_intent_damage = 3
 	melee_damage_lower = 5 // avg damage 12.5 without kick, (12.5+12.5+60)/3=25 with kick
 	melee_damage_upper = 20
@@ -22,11 +24,12 @@
 	speed = -1 // '-1' converts to 1.5 total move delay, or 6.6 tiles/sec movespeed
 	var/attack_cycles = 0
 	var/attack_cycles_max = 3
+	footstep_type = FOOTSTEP_MOB_SHOE
 
-/mob/living/simple_animal/hostile/retaliate/kangaroo/New()
+/mob/living/simple_animal/hostile/retaliate/kangaroo/Initialize(mapload)
 	. = ..()
 	// Leap spell, player-only usage
-	AddSpell(new /obj/effect/proc_holder/spell/targeted/leap)
+	AddSpell(new /datum/spell/leap)
 
 /mob/living/simple_animal/hostile/retaliate/kangaroo/AttackingTarget()
 	if(client && a_intent != INTENT_HARM)

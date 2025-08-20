@@ -153,6 +153,7 @@
 	stop_playing()
 	SSinstruments.on_song_del(src)
 	lines = null
+	using_instrument.songs_using -= src
 	using_instrument = null
 	allowed_instrument_ids = null
 	parent = null
@@ -217,7 +218,7 @@
 	if(playing)
 		return
 	if(!using_instrument?.is_ready())
-		to_chat(user, "<span class='warning'>An error has occured with [src]. Please reset the instrument.</span>")
+		to_chat(user, "<span class='warning'>An error has occurred with [src]. Please reset the instrument.</span>")
 		return
 	compile_chords()
 	if(!length(compiled_chords))
@@ -261,14 +262,6 @@
 	if(++elapsed_delay >= delay_by)
 		// We were sustaining the final note but not anymore
 		if(current_chord > length(compiled_chords))
-			stop_playing()
-			return
-		var/list/chord = compiled_chords[current_chord]
-		play_chord(chord)
-		elapsed_delay = 0
-		delay_by = tempodiv_to_delay(chord[length(chord)])
-		current_chord++
-		if(current_chord > length(compiled_chords) + 1)
 			if(repeat)
 				repeat--
 				current_chord = 1
@@ -277,6 +270,11 @@
 			else
 				stop_playing()
 				return
+		var/list/chord = compiled_chords[current_chord]
+		play_chord(chord)
+		elapsed_delay = 0
+		delay_by = tempodiv_to_delay(chord[length(chord)])
+		current_chord++
 
 /**
   * Converts a tempodiv to ticks to elapse before playing the next chord, taking into account our tempo.
@@ -354,7 +352,7 @@
 	// We don't want to send the whole payload (song included) just for volume
 	var/datum/tgui/ui = SStgui.get_open_ui(usr, parent, "main")
 	if(ui)
-		ui.push_data(list("volume" = volume), force = TRUE)
+		ui.send_update(list("volume" = volume), TRUE)
 
 /**
   * Setter for setting how low the volume has to get before a note is considered "dead" and dropped
@@ -416,3 +414,12 @@
 	var/obj/structure/musician/M = parent
 	return M.should_stop_playing(user)
 
+// subtype for thermal drills
+/datum/song/thermal_drill
+
+/datum/song/thermal_drill/should_stop_playing(mob/user)
+	. = ..()
+	if(.)
+		return TRUE
+	var/obj/item/thermal_drill/D = parent
+	return D.should_stop_playing(user)

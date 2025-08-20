@@ -3,14 +3,17 @@
 
 //Plus a bobble hat, lets be inclusive!!
 
-/obj/item/clothing/head/beanie //Default is white, this is meant to be seen
+/// Default is white, this is meant to be seen
+/obj/item/clothing/head/beanie
 	name = "white beanie"
 	desc = "A stylish beanie. The perfect winter accessory for those with a keen fashion sense, and those who just can't handle a cold breeze on their heads."
 	icon_state = "beanie" //Default white
 	item_color = "beanie"
 	sprite_sheets = list(
-		"Vox" = 'icons/mob/species/vox/head.dmi',
+		"Vox" = 'icons/mob/clothing/species/vox/head.dmi',
 		)
+	dyeable = TRUE
+	dyeing_key = DYE_REGISTRY_BEANIE
 
 /obj/item/clothing/head/beanie/black
 	name = "black beanie"
@@ -84,7 +87,7 @@
 	desc = "A beanie made from durathread, its resilient fibres provide some protection to the wearer."
 	icon_state = "beaniedurathread"
 	item_color = null
-	armor = list("melee" = 15, "bullet" = 5, "laser" = 15, "energy" = 5, "bomb" = 10, "bio" = 0, "rad" = 0, "fire" = 30, "acid" = 5)
+	armor = list(MELEE = 10, BULLET = 5, LASER = 10, ENERGY = 5, BOMB = 5, RAD = 0, FIRE = 20, ACID = 5)
 
 /obj/item/clothing/head/beanie/waldo
 	name = "red striped bobble hat"

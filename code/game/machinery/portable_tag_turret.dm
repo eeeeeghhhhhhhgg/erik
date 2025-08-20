@@ -1,6 +1,3 @@
-#define TURRET_PRIORITY_TARGET 2
-#define TURRET_SECONDARY_TARGET 1
-#define TURRET_NOT_TARGET 0
 
 /obj/machinery/porta_turret/tag
 	// Reasonable defaults, in case someone manually spawns us
@@ -25,10 +22,10 @@
 	. = ..()
 	icon_state = "[lasercolor]grey_target_prism"
 
-/obj/machinery/porta_turret/tag/weapon_setup(var/obj/item/gun/energy/E)
+/obj/machinery/porta_turret/tag/weapon_setup(obj/item/gun/energy/E)
 	return
 
-/obj/machinery/porta_turret/tag/tgui_data(mob/user)
+/obj/machinery/porta_turret/tag/ui_data(mob/user)
 	var/list/data = list(
 		"locked" = isLocked(user), // does the current user have access?
 		"on" = enabled, // is turret turned on?
@@ -37,14 +34,14 @@
 	)
 	return data
 
-/obj/machinery/porta_turret/tag/update_icon()
+/obj/machinery/porta_turret/tag/update_icon_state()
 	if(!anchored)
 		icon_state = "turretCover"
 		return
 	if(stat & BROKEN)
 		icon_state = "[lasercolor]destroyed_target_prism"
 	else
-		if(powered())
+		if(has_power())
 			if(enabled)
 				if(iconholder)
 					//lasers have a orange icon
@@ -71,11 +68,11 @@
 				spawn(100)
 					disabled  = FALSE
 
-/obj/machinery/porta_turret/tag/assess_living(var/mob/living/L)
+/obj/machinery/porta_turret/tag/assess_living(mob/living/L)
 	if(!L)
 		return TURRET_NOT_TARGET
 
-	if(L.lying)
+	if(IS_HORIZONTAL(L))
 		return TURRET_NOT_TARGET
 
 	var/target_suit
@@ -93,7 +90,7 @@
 		if((istype(L.r_hand, target_weapon)) || (istype(L.l_hand, target_weapon)))
 			return TURRET_PRIORITY_TARGET
 
-		if(istype(L, /mob/living/carbon/human))
+		if(ishuman(L))
 			var/mob/living/carbon/human/H = L
 			if(istype(H.wear_suit, target_suit))
 				return TURRET_PRIORITY_TARGET

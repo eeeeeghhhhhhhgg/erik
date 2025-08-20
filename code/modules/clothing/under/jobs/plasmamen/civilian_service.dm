@@ -5,6 +5,13 @@
 	item_state = "cargo_envirosuit"
 	item_color = "cargo_envirosuit"
 
+/obj/item/clothing/under/plasmaman/expedition
+	name = "expedition envirosuit"
+	desc = "An airtight brown and blue suit designed for operations in Space by plasmamen.."
+	icon_state = "expedition_envirosuit"
+	item_state = "expedition_envirosuit"
+	item_color = "expedition_envirosuit"
+
 /obj/item/clothing/under/plasmaman/mining
 	name = "mining plasma envirosuit"
 	desc = "An airtight khaki suit designed for operations on Lavaland by plasmamen."
@@ -22,7 +29,7 @@
 
 /obj/item/clothing/under/plasmaman/enviroslacks
 	name = "enviroslacks"
-	desc = "The pet project of a particularly posh plasmaman, this custom suit was quickly appropriated by Nanotrasen for its detectives, lawyers, and bartenders alike."
+	desc = "The pet project of a particularly posh plasmaman, this custom suit was quickly appropriated by Nanotrasen for its detectives, internal affairs agents, and bartenders alike."
 	icon_state = "enviroslacks"
 	item_state = "enviroslacks"
 	item_color = "enviroslacks"
@@ -70,6 +77,13 @@
 	item_state = "clown_envirosuit"
 	item_color = "clown_envirosuit"
 
+/obj/item/clothing/under/plasmaman/assistant
+	name = "assistant's envirosuit"
+	desc = "The finest from the bottom of the plasmamen clothing barrel."
+	icon_state = "assistant_envirosuit"
+	item_state = "assistant_envirosuit"
+	item_color = "assistant_envirosuit"
+
 /obj/item/clothing/under/plasmaman/clown/Extinguish(mob/living/carbon/human/H)
 	if(!istype(H))
 		return
@@ -86,22 +100,44 @@
 	return FALSE
 
 /obj/item/clothing/under/plasmaman/hop
-	name = "head of personnel envirosuit"
+	name = "head of personnel's envirosuit"
 	desc = "An envirosuit designed for plasmamen employed as the head of personnel."
 	icon_state = "hop_envirosuit"
 	item_state = "hop_envirosuit"
 	item_color = "hop_envirosuit"
 
 /obj/item/clothing/under/plasmaman/captain
-	name = "captain envirosuit"
+	name = "captain's envirosuit"
 	desc = "An envirosuit designed for plasmamen employed as the captain."
 	icon_state = "cap_envirosuit"
 	item_state = "cap_envirosuit"
 	item_color = "cap_envirosuit"
 
 /obj/item/clothing/under/plasmaman/blueshield
-	name = "blueshield envirosuit"
+	name = "blueshield's envirosuit"
 	desc = "An envirosuit designed for plasmamen employed as the blueshield."
 	icon_state = "bs_envirosuit"
 	item_state = "bs_envirosuit"
 	item_color = "bs_envirosuit"
+
+/obj/item/clothing/under/plasmaman/coke
+	name = "coke envirosuit"
+	desc = "An envirosuit designed by Space Cola Co for plasmamen."
+	icon_state = "coke_envirosuit"
+	item_state = "coke_envirosuit"
+	item_color = "coke_envirosuit"
+
+/obj/item/clothing/under/plasmaman/tacticool
+	name = "tactical envirosuit"
+	desc = "An envirosuit designed to be sleek and tactical, forged on unknown parts of Boron."
+	icon_state = "tacticool_envirosuit"
+	item_state = "tacticool_envirosuit"
+	item_color = "tacticool_envirosuit"
+	has_sensor = FALSE
+
+/obj/item/clothing/under/plasmaman/trainer
+	name = "\improper NT career trainer's envirosuit"
+	desc = "An envirosuit designed for plasmamen employed as the nanotrasen career trainer."
+	icon_state = "trainer_envirosuit"
+	item_state = "trainer_envirosuit"
+	item_color = "trainer_envirosuit"

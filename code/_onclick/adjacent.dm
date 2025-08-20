@@ -10,11 +10,11 @@
 	Note that in all cases the neighbor is handled simply; this is usually the user's mob, in which case it is up to you
 	to check that the mob is not inside of something
 */
-/atom/proc/Adjacent(var/atom/neighbor) // basic inheritance, unused
+/atom/proc/Adjacent(atom/neighbor) // basic inheritance, unused
 	return 0
 
 // Not a sane use of the function and (for now) indicative of an error elsewhere
-/area/Adjacent(var/atom/neighbor)
+/area/Adjacent(atom/neighbor)
 	CRASH("Call to /area/Adjacent(), unimplemented proc")
 
 
@@ -25,7 +25,7 @@
 	* If you are diagonally adjacent, ensure you can pass through at least one of the mutually adjacent square.
 		* Passing through in this case ignores anything with the LETPASSTHROW flag, such as tables, racks, and morgue trays.
 */
-/turf/Adjacent(var/atom/neighbor, var/atom/target = null)
+/turf/Adjacent(atom/neighbor, atom/target = null)
 	var/turf/T0 = get_turf(neighbor)
 	if(T0 == src)
 		return 1
@@ -63,37 +63,47 @@
 	Note: Multiple-tile objects are created when the bound_width and bound_height are creater than the tile size.
 	This is not used in stock /tg/station currently.
 */
-/atom/movable/Adjacent(var/atom/neighbor)
-	if(neighbor == loc) return 1
-	if(!isturf(loc)) return 0
+/atom/movable/Adjacent(atom/neighbor)
+	if(neighbor == loc)
+		return TRUE
+	if(!isturf(loc))
+		return FALSE
 	for(var/turf/T in locs)
 		if(isnull(T)) continue
-		if(T.Adjacent(neighbor,src)) return 1
-	return 0
+		if(T.Adjacent(neighbor, src)) return TRUE
+	return FALSE
 
 // This is necessary for storage items not on your person.
-/obj/item/Adjacent(var/atom/neighbor, var/recurse = 1)
-	if(neighbor == loc) return 1
-	if(istype(loc,/obj/item))
+/obj/item/Adjacent(atom/neighbor, recurse = 1)
+	if(neighbor == loc)
+		return TRUE
+	if(!istype(neighbor))
+		return ..()
+	if(isnull(loc))
+		return FALSE
+	if(HAS_TRAIT(loc, TRAIT_ADJACENCY_TRANSPARENT))
+		// Transparent parent, don't decrease recurse.
+		return loc.Adjacent(neighbor, recurse)
+	if(isitem(loc) || isstructure(loc) || isvehicle(loc))
 		if(recurse > 0)
-			return loc.Adjacent(neighbor,recurse - 1)
-		return 0
+			return loc.Adjacent(neighbor, recurse - 1)
+		return FALSE
 	return ..()
 
 /*
 	This checks if you there is uninterrupted airspace between that turf and this one.
-	This is defined as any dense ON_BORDER object, or any dense object without LETPASSTHROW.
+	This is defined as any dense ON_BORDER object, or any dense object without PASSTAKE .
 	The border_only flag allows you to not objects (for source and destination squares)
 */
-/turf/proc/ClickCross(var/target_dir, var/border_only, var/target_atom = null)
+/turf/proc/ClickCross(target_dir, border_only, target_atom = null)
 	for(var/obj/O in src)
-		if( !O.density || O == target_atom || (O.pass_flags & LETPASSTHROW))
-			continue // LETPASSTHROW is used for anything you can click through
+		if(!O.density || O == target_atom || (O.pass_flags_self & PASSTAKE))
+			continue // PASSTAKE is used for anything you can click through
 
-		if( O.flags&ON_BORDER) // windows are on border, check them first
-			if( O.dir & target_dir || O.dir&(O.dir-1) ) // full tile windows are just diagonals mechanically
+		if(O.flags&ON_BORDER) // windows are on border, check them first
+			if(O.dir & target_dir || O.dir&(O.dir-1)) // full tile windows are just diagonals mechanically
 				return 0
 
-		else if( !border_only ) // dense, not on border, cannot pass over
+		else if(!border_only) // dense, not on border, cannot pass over
 			return 0
 	return 1

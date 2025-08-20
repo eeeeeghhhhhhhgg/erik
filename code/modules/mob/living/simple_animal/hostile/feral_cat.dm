@@ -6,6 +6,7 @@
 	icon_living = "cat2"
 	icon_dead = "cat2_dead"
 	gender = MALE
+	mob_biotypes = MOB_ORGANIC | MOB_BEAST
 	maxHealth = 20
 	health = 20
 	melee_damage_lower = 10
@@ -17,7 +18,7 @@
 	speak_chance = 1
 	turns_per_move = 5
 	see_in_dark = 6
-	butcher_results = list(/obj/item/reagent_containers/food/snacks/meat/slab = 2)
+	butcher_results = list(/obj/item/food/meat/slab = 2)
 	response_help  = "pets"
 	response_disarm = "gently pushes aside"
 	response_harm   = "kicks"

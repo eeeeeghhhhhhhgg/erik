@@ -5,8 +5,8 @@
 	icon_state = "spiderbot-chassis"
 	icon_living = "spiderbot-chassis"
 	icon_dead = "spiderbot-smashed"
-	wander = 0
-	universal_speak = 1
+	wander = FALSE
+	universal_speak = TRUE
 	health = 40
 	maxHealth = 40
 	pass_flags = PASSTABLE
@@ -21,6 +21,7 @@
 	response_disarm = "shoos"
 	response_harm   = "stomps on"
 	speed = 0
+	mob_biotypes = MOB_ROBOTIC
 	mob_size = MOB_SIZE_SMALL
 	speak_emote = list("beeps","clicks","chirps")
 
@@ -28,12 +29,12 @@
 	minbodytemp = 0
 	maxbodytemp = 500
 
-	can_hide = 1
-	ventcrawler = 2
+	can_hide = TRUE
+	ventcrawler = VENTCRAWLER_ALWAYS
 	loot = list(/obj/effect/decal/cleanable/blood/gibs/robot)
-	del_on_death = 1
+	del_on_death = TRUE
 
-	var/emagged = 0               //is it getting ready to explode?
+	var/emagged = FALSE               //is it getting ready to explode?
 	var/obj/item/mmi/mmi = null
 	var/mob/emagged_master = null //for administrative purposes, to see who emagged the spiderbot; also for a holder for if someone emags an empty frame first then inserts an MMI.
 
@@ -45,15 +46,15 @@
 		eject_brain()
 	return ..()
 
-/mob/living/simple_animal/spiderbot/attackby(obj/item/O, mob/living/user, params)
+/mob/living/simple_animal/spiderbot/item_interaction(mob/living/user, obj/item/O, list/modifiers)
 	if(istype(O, /obj/item/mmi))
 		var/obj/item/mmi/B = O
 		if(mmi) //There's already a brain in it.
 			to_chat(user, "<span class='warning'>There's already a brain in [src]!</span>")
-			return
+			return ITEM_INTERACT_COMPLETE
 		if(!B.brainmob)
 			to_chat(user, "<span class='warning'>Sticking an empty MMI into the frame would sort of defeat the purpose.</span>")
-			return
+			return ITEM_INTERACT_COMPLETE
 		if(!B.brainmob.key)
 			var/ghost_can_reenter = 0
 			if(B.brainmob.mind)
@@ -62,20 +63,20 @@
 						ghost_can_reenter = 1
 						break
 				for(var/mob/living/simple_animal/S in GLOB.player_list)
-					if(S in GLOB.respawnable_list)
+					if(HAS_TRAIT(S, TRAIT_RESPAWNABLE))
 						ghost_can_reenter = 1
 						break
 			if(!ghost_can_reenter)
 				to_chat(user, "<span class='notice'>[B] is completely unresponsive; there's no point.</span>")
-				return
+				return ITEM_INTERACT_COMPLETE
 
 		if(B.brainmob.stat == DEAD)
 			to_chat(user, "<span class='warning'>[B] is dead. Sticking it into the frame would sort of defeat the purpose.</span>")
-			return
+			return ITEM_INTERACT_COMPLETE
 
 		if(jobban_isbanned(B.brainmob, "Cyborg") || jobban_isbanned(B.brainmob, "nonhumandept"))
 			to_chat(user, "<span class='warning'>[B] does not seem to fit.</span>")
-			return
+			return ITEM_INTERACT_COMPLETE
 
 		to_chat(user, "<span class='notice'>You install [B] in [src]!</span>")
 
@@ -85,16 +86,16 @@
 		transfer_personality(B)
 
 		update_icon()
-		return 1
+		return ITEM_INTERACT_COMPLETE
 
 	else if(istype(O, /obj/item/card/id) || istype(O, /obj/item/pda))
 		if(!mmi)
 			to_chat(user, "<span class='warning'>There's no reason to swipe your ID - the spiderbot has no brain to remove.</span>")
-			return 0
+			return ITEM_INTERACT_COMPLETE
 
 		if(emagged)
 			to_chat(user, "<span class='warning'>[src] doesn't seem to respond.</span>")
-			return 0
+			return ITEM_INTERACT_COMPLETE
 
 		var/obj/item/card/id/id_card
 
@@ -107,13 +108,10 @@
 		if(ACCESS_ROBOTICS in id_card.access)
 			to_chat(user, "<span class='notice'>You swipe your access card and pop the brain out of [src].</span>")
 			eject_brain()
-			return 1
+			return ITEM_INTERACT_COMPLETE
 		else
 			to_chat(user, "<span class='warning'>You swipe your card, with no effect.</span>")
-			return 0
-
-	else
-		..()
+			return ITEM_INTERACT_COMPLETE
 
 /mob/living/simple_animal/spiderbot/welder_act(mob/user, obj/item/I)
 	if(user.a_intent != INTENT_HELP)
@@ -135,7 +133,7 @@
 		to_chat(user, "<span class='warning'>[src] doesn't seem to respond.</span>")
 		return 0
 	else
-		emagged = 1
+		emagged = TRUE
 		to_chat(user, "<span class='notice'>You short out the security protocols and rewrite [src]'s internal memory.</span>")
 		to_chat(src, "<span class='userdanger'>You have been emagged; you are now completely loyal to [user] and [user.p_their()] every order!</span>")
 		emagged_master = user
@@ -145,6 +143,7 @@
 		melee_damage_lower = 15
 		melee_damage_upper = 15
 		attack_sound = 'sound/machines/defib_zap.ogg'
+		return TRUE
 
 /mob/living/simple_animal/spiderbot/proc/transfer_personality(obj/item/mmi/M)
 	mind = M.brainmob.mind
@@ -154,7 +153,7 @@
 	if(emagged)
 		to_chat(src, "<span class='userdanger'>You have been emagged; you are now completely loyal to [emagged_master] and [emagged_master.p_their()] every order!</span>")
 
-/mob/living/simple_animal/spiderbot/proc/update_icon()
+/mob/living/simple_animal/spiderbot/update_icon_state()
 	if(mmi)
 		if(istype(mmi, /obj/item/mmi))
 			icon_state = "spiderbot-chassis-mmi"

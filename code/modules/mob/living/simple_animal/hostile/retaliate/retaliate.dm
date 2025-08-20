@@ -12,13 +12,9 @@
 		var/obj/mecha/M = A
 		if(M.occupant)
 			return A
-	else if(isspacepod(A))
-		var/obj/spacepod/S = A
-		if(S.pilot)
-			return A
 
 /mob/living/simple_animal/hostile/retaliate/ListTargets()
-	if(!enemies.len)
+	if(!length(enemies))
 		return list()
 	var/list/see = ..()
 	see &= enemies // Remove all entries that aren't in enemies
@@ -39,11 +35,6 @@
 			if(M.occupant)
 				enemies |= M
 				enemies |= M.occupant
-		else if(isspacepod(A))
-			var/obj/spacepod/S = A
-			if(S.pilot)
-				enemies |= S
-				enemies |= S.pilot
 
 	for(var/mob/living/simple_animal/hostile/retaliate/H in around)
 		if(faction_check_mob(H) && !attack_same && !H.attack_same)

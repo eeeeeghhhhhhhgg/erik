@@ -32,7 +32,7 @@ $dbServer = "localhost"; // Hostname of the database server (default localhost)
 $dbPort = "3306"; // Port of the database server (default 3306) | MUST BE A STRING
 $dbUser = "root"; // Database username (default root)
 $dbPassword = ""; // Database password (default blank)
-$dbDatabase = "feedback"; // Database name (default feedback)
+$dbDatabase = "paradise_gamedb"; // Database name (default paradise_gamedb)
 
 //servers to announce PRs to.
 $servers = array();
@@ -317,7 +317,7 @@ function export($addr, $port, $str) {
 		$bytessent += $result;
 	}
 
-	/* --- Idle for a while until recieved bytes from game server --- */
+	/* --- Idle for a while until received bytes from game server --- */
 	$result = socket_read($server, 10000, PHP_BINARY_READ);
 	socket_close($server); // we don't need this anymore
 

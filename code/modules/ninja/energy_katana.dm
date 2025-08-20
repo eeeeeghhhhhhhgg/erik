@@ -1,27 +1,29 @@
 /obj/item/katana/energy
 	name = "energy katana"
-	desc = "A katana infused with a strong energy"
+	desc = "A katana infused with a strong energy."
+	icon = 'icons/obj/weapons/energy_melee.dmi'
 	icon_state = "energy_katana"
 	item_state = "energy_katana"
 	force = 40
 	throwforce = 20
-	armour_penetration = 50
+	armour_penetration_percentage = 50
+	armour_penetration_flat = 10
 	var/cooldown = 0 // Because spam aint cool, yo.
 	var/datum/effect_system/spark_spread/spark_system
 
 
-/obj/item/katana/energy/attack(mob/living/carbon/M as mob, mob/living/carbon/user as mob)
-	playsound(user, 'sound/weapons/blade1.ogg', 50, 1, -1)
+/obj/item/katana/energy/attack__legacy__attackchain(mob/living/carbon/M as mob, mob/living/carbon/user as mob)
+	playsound(user, 'sound/weapons/blade1.ogg', 50, TRUE, -1)
 	return ..()
 
-/obj/item/katana/energy/afterattack(atom/target, mob/user, proximity_flag, click_parameters)
+/obj/item/katana/energy/afterattack__legacy__attackchain(atom/target, mob/user, proximity_flag, click_parameters)
 	if(!user || !target)
 		return
 
 	if(proximity_flag && user.mind.special_role == "Ninja" && !cooldown && isobj(target))
 		cooldown = 1
 		spark_system.start()
-		playsound(user, "sparks", 50, 1)
+		playsound(user, "sparks", 50, TRUE, SHORT_RANGE_SOUND_EXTRARANGE)
 		playsound(user, 'sound/weapons/blade1.ogg', 50, 1)
 		user.visible_message("<span class='danger'>[user] masterfully slices [target]!</span>", "<span class='notice'>You masterfully slice [target]!</span>")
 		target.emag_act(user)
@@ -39,20 +41,20 @@
 	..()*/
 
 
-/obj/item/katana/energy/proc/returnToOwner(var/mob/living/carbon/human/user, var/doSpark = 1, var/caught = 0)
+/obj/item/katana/energy/proc/returnToOwner(mob/living/carbon/human/user, doSpark = 1, caught = 0)
 	if(!istype(user))
 		return
 	loc = get_turf(src)
 
 	if(doSpark)
 		spark_system.start()
-		playsound(get_turf(src), "sparks", 50, 1)
+		playsound(get_turf(src), "sparks", 50, TRUE, SHORT_RANGE_SOUND_EXTRARANGE)
 
 	var/msg = ""
 
 	if(user.put_in_hands(src))
 		msg = "Your Energy Katana teleports into your hand!"
-	else if(user.equip_to_slot_if_possible(src, slot_belt, FALSE, TRUE))
+	else if(user.equip_to_slot_if_possible(src, ITEM_SLOT_BELT, FALSE, TRUE))
 		msg = "Your Energy Katana teleports back to you, sheathing itself as it does so!</span>"
 	else
 		loc = get_turf(user)

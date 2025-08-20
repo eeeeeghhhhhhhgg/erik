@@ -27,21 +27,21 @@
 	user.visible_message("<span class='suicide'>[user] begins to play 'Gloomy Sunday'! It looks like [user.p_theyre()] trying to commit suicide!</span>")
 	return BRUTELOSS
 
-/obj/item/instrument/attack_self(mob/user)
-	tgui_interact(user)
+/obj/item/instrument/attack_self__legacy__attackchain(mob/user)
+	ui_interact(user)
 
-/obj/item/instrument/tgui_data(mob/user)
-	return song.tgui_data(user)
+/obj/item/instrument/ui_data(mob/user)
+	return song.ui_data(user)
 
-/obj/item/instrument/tgui_interact(mob/user)
+/obj/item/instrument/ui_interact(mob/user)
 	if(!isliving(user) || user.incapacitated())
 		return
-	song.tgui_interact(user)
+	song.ui_interact(user)
 
-/obj/item/instrument/tgui_act(action, params)
+/obj/item/instrument/ui_act(action, params)
 	if(..())
 		return
-	return song.tgui_act(action, params)
+	return song.ui_act(action, params)
 
 /**
   * Whether the instrument should stop playing

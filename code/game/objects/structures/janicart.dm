@@ -5,182 +5,273 @@
 	desc = "This is the alpha and omega of sanitation."
 	icon = 'icons/obj/janitor.dmi'
 	icon_state = "cart"
-	anchored = 0
-	density = 1
+	anchored = FALSE
+	density = TRUE
+	face_while_pulling = FALSE
 	container_type = OPENCONTAINER
+	new_attack_chain = TRUE
 	//copypaste sorry
+	var/maximum_volume = 150
 	var/amount_per_transfer_from_this = 5 //shit I dunno, adding this so syringes stop runtime erroring. --NeoFite
-	var/obj/item/storage/bag/trash/mybag	= null
-	var/obj/item/mop/mymop = null
-	var/obj/item/reagent_containers/spray/cleaner/myspray = null
-	var/obj/item/lightreplacer/myreplacer = null
+	var/obj/item/storage/bag/trash/my_bag = null
+	var/obj/item/mop/my_mop = null
+	var/obj/item/push_broom/my_broom = null
+	var/obj/item/reagent_containers/spray/cleaner/my_spray = null
+	var/obj/item/lightreplacer/my_replacer = null
 	var/signs = 0
 	var/const/max_signs = 4
 
-
-/obj/structure/janitorialcart/New()
-	..()
-	create_reagents(100)
+/obj/structure/janitorialcart/Initialize(mapload)
+	. = ..()
+	create_reagents(150)
 	GLOB.janitorial_equipment += src
 
 /obj/structure/janitorialcart/Destroy()
 	GLOB.janitorial_equipment -= src
-	QDEL_NULL(mybag)
-	QDEL_NULL(mymop)
-	QDEL_NULL(myspray)
-	QDEL_NULL(myreplacer)
+	QDEL_NULL(my_bag)
+	QDEL_NULL(my_mop)
+	QDEL_NULL(my_broom)
+	QDEL_NULL(my_spray)
+	QDEL_NULL(my_replacer)
 	return ..()
 
-/obj/structure/janitorialcart/proc/wet_mop(obj/item/mop, mob/user)
-	if(reagents.total_volume < 1)
-		to_chat(user, "[src] is out of water!</span>")
-	else
-		reagents.trans_to(mop, 5)	//
-		to_chat(user, "<span class='notice'>You wet [mop] in [src].</span>")
-		playsound(loc, 'sound/effects/slosh.ogg', 25, 1)
+/obj/structure/janitorialcart/proc/put_in_cart(mob/user, obj/item/I)
+	if(!user.unequip(I)) // We can do this here because everything below wants to
+		to_chat(user, "<span class='warning'>[I] is stuck to your hand!</span>")
+		return
 
-/obj/structure/janitorialcart/proc/put_in_cart(obj/item/I, mob/user)
-	user.drop_item()
-	I.loc = src
-	updateUsrDialog()
+	I.forceMove(src)
 	to_chat(user, "<span class='notice'>You put [I] into [src].</span>")
+	update_icon(UPDATE_OVERLAYS)
 	return
 
+/obj/structure/janitorialcart/on_reagent_change()
+	update_icon(UPDATE_OVERLAYS)
 
-/obj/structure/janitorialcart/attackby(obj/item/I, mob/user, params)
-	var/fail_msg = "<span class='notice'>There is already one of those in [src].</span>"
+/obj/structure/janitorialcart/item_interaction(mob/living/user, obj/item/used, list/modifiers)
+	if(user.a_intent != INTENT_HELP)
+		return ..()
 
-	if(!I.is_robot_module())
-		if(istype(I, /obj/item/mop))
-			var/obj/item/mop/m=I
-			if(m.reagents.total_volume < m.reagents.maximum_volume)
-				wet_mop(m, user)
-				return
-			if(!mymop)
-				m.janicart_insert(user, src)
-			else
-				to_chat(user, fail_msg)
+	if(handle_janitorial_equipment(user, used))
+		return ITEM_INTERACT_COMPLETE
 
-		else if(istype(I, /obj/item/storage/bag/trash))
-			if(!mybag)
-				var/obj/item/storage/bag/trash/t=I
-				t.janicart_insert(user, src)
-			else
-				to_chat(user, fail_msg)
-		else if(istype(I, /obj/item/reagent_containers/spray/cleaner))
-			if(!myspray)
-				put_in_cart(I, user)
-				myspray=I
-				update_icon()
-			else
-				to_chat(user, fail_msg)
-		else if(istype(I, /obj/item/lightreplacer))
-			if(!myreplacer)
-				var/obj/item/lightreplacer/l=I
-				l.janicart_insert(user,src)
-			else
-				to_chat(user, fail_msg)
-		else if(istype(I, /obj/item/caution))
-			if(signs < max_signs)
-				put_in_cart(I, user)
-				signs++
-				update_icon()
-			else
-				to_chat(user, "<span class='notice'>[src] can't hold any more signs.</span>")
-		else if(istype(I, /obj/item/crowbar))
-			user.visible_message("<span class='warning'>[user] begins to empty the contents of [src].</span>")
-			if(do_after(user, 30 * I.toolspeed, target = src))
-				to_chat(usr, "<span class='notice'>You empty the contents of [src]'s bucket onto the floor.</span>")
-				reagents.reaction(src.loc)
-				src.reagents.clear_reagents()
-		else if(istype(I, /obj/item/wrench))
-			if(!anchored && !isinspace())
-				playsound(src.loc, I.usesound, 50, 1)
-				user.visible_message( \
-					"[user] tightens \the [src]'s casters.", \
-					"<span class='notice'> You have tightened \the [src]'s casters.</span>", \
-					"You hear ratchet.")
-				anchored = 1
-			else if(anchored)
-				playsound(src.loc, I.usesound, 50, 1)
-				user.visible_message( \
-					"[user] loosens \the [src]'s casters.", \
-					"<span class='notice'> You have loosened \the [src]'s casters.</span>", \
-					"You hear ratchet.")
-				anchored = 0
-		else if(mybag)
-			mybag.attackby(I, user, params)
-	else
-		to_chat(usr, "<span class='warning'>You cannot interface your modules [src]!</span>")
+	if(istype(used, /obj/item/reagent_containers))
+		return ITEM_INTERACT_SKIP_TO_AFTER_ATTACK
+
+	if(my_bag)
+		if(my_bag.can_be_inserted(used))
+			my_bag.handle_item_insertion(used, user)
+		return ITEM_INTERACT_COMPLETE
+
+	return ..()
+
+/obj/structure/janitorialcart/proc/handle_janitorial_equipment(mob/living/user, obj/item/used)
+	. = TRUE
+	var/robot_module = used.is_robot_module()
+	var/item_present = FALSE
+	if(istype(used, /obj/item/mop))
+		var/obj/item/mop/attacking_mop = used
+		if(attacking_mop.reagents.total_volume < attacking_mop.reagents.maximum_volume)
+			attacking_mop.wet_mop(src, user, robot_module)
+			return
+
+		if(robot_module)
+			to_chat(user, "<span class='warning'>You cannot store [used] in [src]!</span>")
+			return
+
+		if(!my_mop)
+			my_mop = attacking_mop
+			put_in_cart(user, attacking_mop)
+		else
+			to_chat(user, "<span class='notice'>There is already one of those in [src].</span>")
+		return
+
+	if(robot_module)
+		to_chat(user, "<span class='warning'>You cannot store [used] in [src]!</span>")
+		return
+
+	if(istype(used, /obj/item/caution))
+		if(signs < max_signs)
+			signs++
+			put_in_cart(user, used)
+		else
+			to_chat(user, "<span class='notice'>[src] can't hold any more signs.</span>")
+		return
+
+	if(istype(used, /obj/item/push_broom))
+		if(!my_broom)
+			my_broom = used
+			put_in_cart(user, used)
+			return
+		item_present = TRUE
+	
+	if(istype(used, /obj/item/storage/bag/trash))
+		if(!my_bag)
+			my_bag = used
+			put_in_cart(user, used)
+			return
+		item_present = TRUE
+
+	if(istype(used, /obj/item/reagent_containers/spray/cleaner))
+		if(!my_spray)
+			my_spray = used
+			put_in_cart(user, used)
+			return
+		item_present = TRUE
+
+	if(istype(used, /obj/item/lightreplacer))
+		if(!my_replacer)
+			my_replacer = used
+			put_in_cart(user, used)
+			return
+		item_present = TRUE
+
+	if(item_present)
+		to_chat(user, "<span class='notice'>There is already one of those in [src].</span>")
+		return
+
+	return FALSE
+
+/obj/structure/janitorialcart/crowbar_act(mob/living/user, obj/item/I)
+	. = TRUE
+	user.visible_message(
+		"<span class='warning'>[user] begins to empty the contents of [src].</span>",
+		"<span class='notice'>You begin to empty the contents of [src].</span>",
+		"<span class='warning'>You hear a prying sound.</span>"
+		)
+	if(!I.use_tool(src, user, 3 SECONDS, volume = I.tool_volume))
+		return
+
+	user.visible_message(
+		"<span class='warning'>[user] empties the contents of [src]'s bucket onto the floor!</span>",
+		"<span class='notice'>You empty the contents of [src]'s bucket onto the floor.</span>",
+		"<span class='warning'>You hear liquid spilling onto the floor.</span>"
+		)
+	reagents.reaction(loc)
+	reagents.clear_reagents()
+
+/obj/structure/janitorialcart/wrench_act(mob/living/user, obj/item/I)
+	. = TRUE
+	if(!anchored && !isinspace())
+		if(!I.use_tool(src, user, volume = I.tool_volume))
+			return
+
+		user.visible_message( \
+			"<span class='notice'>[user] tightens [src]'s casters.</span>",
+			"<span class='notice'>You have tightened [src]'s casters.</span>",
+			"<span class='notice'>You hear ratcheting.</span>"
+			)
+		anchored = TRUE
+		return
+
+	if(anchored)
+		if(!I.use_tool(src, user, volume = I.tool_volume))
+			return
+
+		user.visible_message( \
+			"<span class='notice'>[user] loosens [src]'s casters.</span>",
+			"<span class='notice'>You have loosened [src]'s casters.</span>",
+			"<span class='notice'>You hear ratcheting.</span>"
+			)
+		anchored = FALSE
 
 /obj/structure/janitorialcart/attack_hand(mob/user)
-	user.set_machine(src)
-	var/dat
-	if(mybag)
-		dat += "<a href='?src=[UID()];garbage=1'>[mybag.name]</a><br>"
-	if(mymop)
-		dat += "<a href='?src=[UID()];mop=1'>[mymop.name]</a><br>"
-	if(myspray)
-		dat += "<a href='?src=[UID()];spray=1'>[myspray.name]</a><br>"
-	if(myreplacer)
-		dat += "<a href='?src=[UID()];replacer=1'>[myreplacer.name]</a><br>"
-	if(signs)
-		dat += "<a href='?src=[UID()];sign=1'>[signs] sign\s</a><br>"
-	var/datum/browser/popup = new(user, "janicart", name, 240, 160)
-	popup.set_content(dat)
-	popup.open()
+	var/list/cart_items = list()
 
+	if(my_bag)
+		cart_items["Trash Bag"] = image(icon = my_bag.icon, icon_state = my_bag.icon_state)
+	if(my_mop)
+		cart_items["Mop"] = image(icon = my_mop.icon, icon_state = my_mop.icon_state)
+	if(my_broom)
+		cart_items["Broom"] = image(icon = my_broom.icon, icon_state = my_broom.icon_state)
+	if(my_spray)
+		cart_items["Spray Bottle"] = image(icon = my_spray.icon, icon_state = my_spray.icon_state)
+	if(my_replacer)
+		cart_items["Light Replacer"] = image(icon = my_replacer.icon, icon_state = my_replacer.icon_state)
+	var/obj/item/caution/sign = locate() in src
+	if(sign)
+		cart_items["Sign"] = image(icon = sign.icon, icon_state = sign.icon_state)
 
-/obj/structure/janitorialcart/Topic(href, href_list)
-	if(!in_range(src, usr))
+	if(!length(cart_items))
 		return
-	if(!isliving(usr))
+
+	var/pick = show_radial_menu(user, src, cart_items, custom_check = CALLBACK(src, PROC_REF(check_menu), user), require_near = TRUE)
+
+	if(!pick)
 		return
-	var/mob/living/user = usr
-	if(href_list["garbage"])
-		if(mybag)
-			user.put_in_hands(mybag)
-			to_chat(user, "<span class='notice'>You take [mybag] from [src].</span>")
-			mybag = null
-	if(href_list["mop"])
-		if(mymop)
-			user.put_in_hands(mymop)
-			to_chat(user, "<span class='notice'>You take [mymop] from [src].</span>")
-			mymop = null
-	if(href_list["spray"])
-		if(myspray)
-			user.put_in_hands(myspray)
-			to_chat(user, "<span class='notice'>You take [myspray] from [src].</span>")
-			myspray = null
-	if(href_list["replacer"])
-		if(myreplacer)
-			user.put_in_hands(myreplacer)
-			to_chat(user, "<span class='notice'>You take [myreplacer] from [src].</span>")
-			myreplacer = null
-	if(href_list["sign"])
-		if(signs)
-			var/obj/item/caution/Sign = locate() in src
-			if(Sign)
-				user.put_in_hands(Sign)
-				to_chat(user, "<span class='notice'>You take \a [Sign] from [src].</span>")
+
+	switch(pick)
+		if("Trash Bag")
+			if(!my_bag)
+				return
+			user.put_in_hands(my_bag)
+			to_chat(user, "<span class='notice'>You take [my_bag] from [src].</span>")
+			my_bag = null
+		if("Mop")
+			if(!my_mop)
+				return
+			user.put_in_hands(my_mop)
+			to_chat(user, "<span class='notice'>You take [my_mop] from [src].</span>")
+			my_mop = null
+		if("Broom")
+			if(!my_broom)
+				return
+			user.put_in_hands(my_broom)
+			to_chat(user, "<span class='notice'>You take [my_broom] from [src].</span>")
+			my_broom = null
+		if("Spray Bottle")
+			if(!my_spray)
+				return
+			user.put_in_hands(my_spray)
+			to_chat(user, "<span class='notice'>You take [my_spray] from [src].</span>")
+			my_spray = null
+		if("Light Replacer")
+			if(!my_replacer)
+				return
+			user.put_in_hands(my_replacer)
+			to_chat(user, "<span class='notice'>You take [my_replacer] from [src].</span>")
+			my_replacer = null
+		if("Sign")
+			if(!signs)
+				return
+			if(sign)
+				user.put_in_hands(sign)
+				to_chat(user, "<span class='notice'>You take \a [sign] from [src].</span>")
 				signs--
 			else
 				WARNING("Signs ([signs]) didn't match contents")
 				signs = 0
 
-	update_icon()
-	updateUsrDialog()
+	update_icon(UPDATE_OVERLAYS)
 
+/obj/structure/janitorialcart/proc/check_menu(mob/living/user)
+	return (istype(user) && !HAS_TRAIT(user, TRAIT_HANDS_BLOCKED))
 
-/obj/structure/janitorialcart/update_icon()
-	overlays = null
-	if(mybag)
-		overlays += "cart_garbage"
-	if(mymop)
-		overlays += "cart_mop"
-	if(myspray)
-		overlays += "cart_spray"
-	if(myreplacer)
-		overlays += "cart_replacer"
+/obj/structure/janitorialcart/update_overlays()
+	. = ..()
+	if(my_bag)
+		. += "cart_garbage"
+	if(my_mop)
+		. += "cart_mop"
+	if(my_broom)
+		. += "cart_broom"
+	if(my_spray)
+		. += "cart_spray"
+	if(my_replacer)
+		. += "cart_replacer"
 	if(signs)
-		overlays += "cart_sign[signs]"
+		. += "cart_sign[signs]"
+	if(reagents.total_volume > 0)
+		var/image/reagentsImage = image(icon,src,"cart_reagents0")
+		reagentsImage.alpha = 150
+		switch((reagents.total_volume / maximum_volume) * 100)
+			if(1 to 37)
+				reagentsImage.icon_state = "cart_reagents1"
+			if(38 to 75)
+				reagentsImage.icon_state = "cart_reagents2"
+			if(76 to 112)
+				reagentsImage.icon_state = "cart_reagents3"
+			if(113 to 150)
+				reagentsImage.icon_state = "cart_reagents4"
+		reagentsImage.icon += mix_color_from_reagents(reagents.reagent_list)
+		. += reagentsImage

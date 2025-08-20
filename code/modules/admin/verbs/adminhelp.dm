@@ -1,42 +1,47 @@
-
-
-//This is a list of words which are ignored by the parser when comparing message contents for names. MUST BE IN LOWER CASE!
-GLOBAL_LIST_INIT(adminhelp_ignored_words, list("unknown","the","a","an","of","monkey","alien","as"))
-
 /client/verb/adminhelp()
 	set category = "Admin"
 	set name = "Adminhelp"
 
 	//handle muting and automuting
-	if(prefs.muted & MUTE_ADMINHELP)
-		to_chat(src, "<font color='red'>Error: Admin-PM: You cannot send adminhelps (Muted).</font>")
+	if(check_mute(ckey, MUTE_ADMINHELP))
+		to_chat(src, "<font color='red'>Error: Admin-PM: You cannot send adminhelps (Muted).</font>", MESSAGE_TYPE_ADMINPM, confidential = TRUE)
 		return
 
-	adminhelped = 1 //Determines if they get the message to reply by clicking the name.
+	adminhelped = TRUE //Determines if they get the message to reply by clicking the name.
 
 	var/msg
-	var/list/type = list("Mentorhelp","Adminhelp")
-	var/selected_type = input("Pick a category.", "Admin Help", null, null) as null|anything in type
+	var/list/type = list("Mentorhelp", "Adminhelp")
+	var/selected_type = input("Pick a category.", "Admin Help") as null|anything in type
 	if(selected_type)
-		msg = clean_input("Please enter your message.", "Admin Help", null)
+		msg = clean_input("Please enter your message.", selected_type)
 
-	//clean the input msg
 	if(!msg)
 		return
 
 	if(handle_spam_prevention(msg, MUTE_ADMINHELP, OOC_COOLDOWN))
 		return
 
-	msg = sanitize_simple(copytext(msg,1,MAX_MESSAGE_LEN))
-	if(!msg)	return
-	if(selected_type == "Mentorhelp")
-		SSmentor_tickets.newHelpRequest(src, msg)
-	else
-		SStickets.newHelpRequest(src, msg)
+	msg = sanitize_simple(copytext_char(msg, 1, MAX_MESSAGE_LEN))
+	if(!msg) // No message after sanitisation
+		return
 
-	//show it to the person adminhelping too
-	to_chat(src, "<span class='boldnotice'>[selected_type]</b>: [msg]</span>")
-	feedback_add_details("admin_verb","AH") //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
+	var/span_type
+	var/message_type
+	var/datum/ticket/T
+	if(selected_type == "Mentorhelp")
+		T = SSmentor_tickets.newHelpRequest(src, msg) // Mhelp
+		span_type = "mentorhelp"
+		message_type = MESSAGE_TYPE_MENTORPM
+		//show it to the person mentorhelping too
+		to_chat(src, chat_box_mhelp("<span class='[span_type]'><b>[selected_type]</b><br><br>[msg]</span>"), message_type, confidential = TRUE)
+	else
+		T = SStickets.newHelpRequest(src, msg) // Ahelp
+		span_type = "adminhelp"
+		message_type = MESSAGE_TYPE_ADMINPM
+		//show it to the person adminhelping too
+		to_chat(src, chat_box_ahelp("<span class='[span_type]'><b>[selected_type]</b><br><br>[msg]</span>"), message_type, confidential = TRUE)
+
+	SSblackbox.record_feedback("tally", "admin_verb", 1, "Adminhelp") //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
 
 	switch(selected_type)
 		if("Adminhelp")
@@ -45,19 +50,11 @@ GLOBAL_LIST_INIT(adminhelp_ignored_words, list("unknown","the","a","an","of","mo
 			var/active_admins = admincount[1]
 
 			log_admin("[selected_type]: [key_name(src)]: [msg] - heard by [active_admins] non-AFK admins.")
-			SSdiscord.send2discord_simple_noadmins("[selected_type] from [key_name(src)]: [msg]", check_send_always = TRUE)
+			GLOB.discord_manager.send2discord_simple_noadmins("**\[Adminhelp]** Ticket [T.ticketNum], [key_name(src)]: [msg]", check_send_always = TRUE)
 
 		if("Mentorhelp")
-			var/alerttext
 			var/list/mentorcount = staff_countup(R_MENTOR)
 			var/active_mentors = mentorcount[1]
-			var/inactive_mentors = mentorcount[3]
-
-			if(active_mentors <= 0)
-				if(inactive_mentors > 0)
-					alerttext = " | **ALL MENTORS AFK**"
-				else
-					alerttext = " | **NO MENTORS ONLINE**"
 
 			log_admin("[selected_type]: [key_name(src)]: [msg] - heard by [active_mentors] non-AFK mentors.")
-			SSdiscord.send2discord_simple(DISCORD_WEBHOOK_MENTOR, "[key_name(src)]: [msg][alerttext]")
+			GLOB.discord_manager.send2discord_simple_mentor("Ticket [T.ticketNum], [key_name(src)]: [msg]")

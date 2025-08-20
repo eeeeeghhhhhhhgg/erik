@@ -1,3 +1,6 @@
+/// The amount of time necessary for a structure to be able to produce items after being built
+#define CULT_STRUCTURE_COOLDOWN 60 SECONDS
+
 /obj/structure/cult
 	density = TRUE
 	anchored = TRUE
@@ -25,13 +28,6 @@
 	light_range = 1.5
 	light_color = LIGHT_COLOR_RED
 
-/obj/structure/cult/archives
-	name = "Desk"
-	desc = "A desk covered in arcane manuscripts and tomes in unknown languages. Looking at the text makes your skin crawl."
-	icon_state = "archives"
-	light_range = 1.5
-	light_color = LIGHT_COLOR_FIRE
-
 //Cult versions cuase fuck map conflicts
 /obj/structure/cult/functional
 	max_integrity = 100
@@ -44,6 +40,8 @@
 	var/creation_delay = 2400
 	var/list/choosable_items = list("A coder forgot to set this" = /obj/item/grown/bananapeel)
 	var/creation_message = "A dank smoke comes out, and you pass out. When you come to, you notice a %ITEM%!"
+	/// The dispenser will create this item and then delete itself if it is rust converted.
+	var/obj/mansus_conversion_path = /obj/item/bikehorn/rubberducky
 
 /obj/structure/cult/functional/obj_destruction()
 	visible_message(death_message)
@@ -52,26 +50,31 @@
 
 /obj/structure/cult/functional/examine(mob/user)
 	. = ..()
-	if(iscultist(user) && cooldowntime > world.time)
+	if(IS_CULTIST(user) && cooldowntime > world.time)
 		. += "<span class='cultitalic'>The magic in [src] is weak, it will be ready to use again in [get_ETA()].</span>"
 	. += "<span class='notice'>[src] is [anchored ? "":"not "]secured to the floor.</span>"
 
-/obj/structure/cult/functional/attackby(obj/item/I, mob/user, params)
-	if(istype(I, /obj/item/melee/cultblade/dagger) && iscultist(user))
+/obj/structure/cult/functional/attackby__legacy__attackchain(obj/item/I, mob/user, params)
+	if(istype(I, /obj/item/melee/cultblade/dagger) && IS_CULTIST(user))
+		if(user.holy_check())
+			return
 		anchored = !anchored
 		to_chat(user, "<span class='notice'>You [anchored ? "":"un"]secure [src] [anchored ? "to":"from"] the floor.</span>")
 		if(!anchored)
-			icon_state = SSticker.cultdat?.get_icon("[initial(icon_state)]_off")
+			icon_state = GET_CULT_DATA(get_icon("[initial(icon_state)]_off"), "[initial(icon_state)]_off")
 		else
-			icon_state = SSticker.cultdat?.get_icon("[initial(icon_state)]")
+			icon_state = GET_CULT_DATA(get_icon(initial(icon_state)), initial(icon_state))
 		return
 	return ..()
 
 /obj/structure/cult/functional/attack_hand(mob/living/user)
-	if(!iscultist(user))
+	if(!IS_CULTIST(user))
 		to_chat(user, "[heathen_message]")
 		return
-	if(HULK in user.mutations)
+	if(invisibility)
+		to_chat(user, "<span class='cultitalic'>The magic in [src] is being suppressed, reveal the structure first!</span>")
+		return
+	if(HAS_TRAIT(user, TRAIT_HULK))
 		to_chat(user, "<span class='danger'>You cannot seem to manipulate this structure with your bulky hands!</span>")
 		return
 	if(!anchored)
@@ -80,12 +83,25 @@
 	if(cooldowntime > world.time)
 		to_chat(user, "<span class='cultitalic'>The magic in [src] is weak, it will be ready to use again in [get_ETA()].</span>")
 		return
-	var/choice = input(user, selection_prompt, selection_title) as null|anything in choosable_items
-	var/pickedtype = choosable_items[choice]
-	if(pickedtype && Adjacent(user) && src && !QDELETED(src) && !user.incapacitated() && cooldowntime <= world.time)
+
+
+	var/list/pickable_items = get_choosable_items()
+	var/choice = show_radial_menu(user, src, pickable_items, require_near = TRUE)
+	var/picked_type = pickable_items[choice]
+	if(!QDELETED(src) && picked_type && Adjacent(user) && !user.incapacitated() && cooldowntime <= world.time)
 		cooldowntime = world.time + creation_delay
-		var/obj/item/N = new pickedtype(get_turf(src))
-		to_chat(user, replacetext("[creation_message]", "%ITEM%", "[N.name]"))
+		var/obj/O = new picked_type
+		if(isstructure(O) || !user.put_in_hands(O))
+			O.forceMove(get_turf(src))
+		to_chat(user, replacetext("[creation_message]", "%ITEM%", "[O.name]"))
+
+/**
+  * Returns the items the cult can craft from this forge.
+  *
+  * Override on children for logic regarding game state.
+  */
+/obj/structure/cult/functional/proc/get_choosable_items()
+	return choosable_items.Copy() // Copied incase its modified on children
 
 /**
   * Returns the cooldown time in minutes and seconds
@@ -105,7 +121,7 @@
 /obj/structure/cult/functional/cult_conceal()
 	density = FALSE
 	visible_message("<span class='danger'>[src] fades away.</span>")
-	invisibility = INVISIBILITY_OBSERVER
+	invisibility = INVISIBILITY_HIDDEN_RUNES
 	alpha = 100 //To help ghosts distinguish hidden objs
 	light_range = 0
 	light_power = 0
@@ -120,6 +136,13 @@
 	light_power = initial(light_power)
 	update_light()
 
+/obj/structure/cult/functional/rust_heretic_act()
+	visible_message("<span class='notice'>[src] crumbles to dust. In its midst, you spot \a [initial(mansus_conversion_path.name)].</span>")
+	var/turf/turfy = get_turf(src)
+	new mansus_conversion_path(turfy)
+	turfy.rust_heretic_act()
+	return ..()
+
 /obj/structure/cult/functional/altar
 	name = "altar"
 	desc = "A bloodstained altar dedicated to a cult."
@@ -131,12 +154,22 @@
 	selection_prompt = "You study the rituals on the altar..."
 	selection_title = "Altar"
 	creation_message = "<span class='cultitalic'>You kneel before the altar and your faith is rewarded with a %ITEM%!</span>"
-	choosable_items = list("Eldritch Whetstone" = /obj/item/whetstone/cult, "Flask of Unholy Water" = /obj/item/reagent_containers/food/drinks/bottle/unholywater,
+	choosable_items = list("Eldritch Whetstone" = /obj/item/whetstone/cult, "Flask of Unholy Water" = /obj/item/reagent_containers/drinks/bottle/unholywater,
 							"Construct Shell" = /obj/structure/constructshell)
+	mansus_conversion_path = /obj/effect/heretic_rune/big
 
-/obj/structure/cult/functional/altar/New()
+/obj/structure/cult/functional/altar/get_choosable_items()
 	. = ..()
-	icon_state = SSticker.cultdat?.altar_icon_state
+
+	if(!SSticker.mode.cult_team?.unlocked_heretic_items[PROTEON_ORB_UNLOCKED])
+		return
+	. += "Summoning Orb"
+	.["Summoning Orb"] = /obj/item/proteon_orb
+
+/obj/structure/cult/functional/altar/Initialize(mapload)
+	. = ..()
+	icon_state = GET_CULT_DATA(altar_icon_state, "altar")
+	cooldowntime = world.time + CULT_STRUCTURE_COOLDOWN
 
 /obj/structure/cult/functional/forge
 	name = "daemon forge"
@@ -151,14 +184,26 @@
 	selection_prompt = "You study the schematics etched on the forge..."
 	selection_title = "Forge"
 	creation_message = "<span class='cultitalic'>You work the forge as dark knowledge guides your hands, creating a %ITEM%!</span>"
-	choosable_items = list("Shielded Robe" = /obj/item/clothing/suit/hooded/cultrobes/cult_shield, "Flagellant's Robe" = /obj/item/clothing/suit/hooded/cultrobes/flagellant_robe,
-							"Mirror Shield" = /obj/item/shield/mirror)
+	choosable_items = list("Shielded Robe" = /obj/item/clothing/suit/hooded/cultrobes/cult_shield, "Flagellant's Robe" = /obj/item/clothing/suit/hooded/cultrobes/flagellant_robe)
+	mansus_conversion_path = /obj/structure/eldritch_crucible
 
-/obj/structure/cult/functional/forge/New()
+/obj/structure/cult/functional/forge/get_choosable_items()
 	. = ..()
-	icon_state = SSticker.cultdat?.forge_icon_state
+	if(SSticker.mode.cult_team.mirror_shields_active)
+		// Both lines here are needed. If you do it without, youll get issues.
+		. += "Mirror Shield"
+		.["Mirror Shield"] = /obj/item/shield/mirror
+	if(!SSticker.mode.cult_team?.unlocked_heretic_items[CURSED_BLADE_UNLOCKED])
+		return
+	. += "Cursed Blade"
+	.["Cursed Blade"] = /obj/item/melee/sickly_blade/cursed
 
-/obj/structure/cult/functional/forge/attackby(obj/item/I, mob/user, params)
+
+/obj/structure/cult/functional/forge/Initialize(mapload)
+	. = ..()
+	icon_state = GET_CULT_DATA(forge_icon_state, "forge")
+
+/obj/structure/cult/functional/forge/attackby__legacy__attackchain(obj/item/I, mob/user, params)
 	if(istype(I, /obj/item/grab))
 		var/obj/item/grab/G = I
 		if(!iscarbon(G.affecting))
@@ -189,13 +234,14 @@
 GLOBAL_LIST_INIT(blacklisted_pylon_turfs, typecacheof(list(
 	/turf/simulated/floor/engine/cult,
 	/turf/space,
-	/turf/simulated/floor/plating/lava,
+	/turf/simulated/wall/indestructible,
+	/turf/simulated/floor/lava,
 	/turf/simulated/floor/chasm,
 	/turf/simulated/wall/cult,
-	/turf/simulated/wall/cult/artificer,
-	/turf/unsimulated/wall
+	/turf/simulated/wall/cult/artificer
 	)))
 
+//why is this a subtype of the dispenser type
 /obj/structure/cult/functional/pylon
 	name = "pylon"
 	desc = "A floating crystal that slowly heals those faithful to a cult."
@@ -205,26 +251,24 @@ GLOBAL_LIST_INIT(blacklisted_pylon_turfs, typecacheof(list(
 	max_integrity = 50 //Very fragile
 	death_message = "<span class='danger'>The pylon's crystal vibrates and glows fiercely before violently shattering!</span>"
 	death_sound = 'sound/effects/pylon_shatter.ogg'
+	mansus_conversion_path = /obj/item/clothing/neck/heretic_focus //I guess the crystal turns into a necklace. Look this shouldnt be a subtype, auugh
 
 	var/heal_delay = 30
 	var/last_heal = 0
 	var/corrupt_delay = 50
 	var/last_corrupt = 0
 
-/obj/structure/cult/functional/pylon/New()
+/obj/structure/cult/functional/pylon/Initialize(mapload)
 	. = ..()
-	icon_state = SSticker.cultdat?.pylon_icon_state
+	START_PROCESSING(SSobj, src)
+	icon_state = GET_CULT_DATA(pylon_icon_state, "pylon")
 
 /obj/structure/cult/functional/pylon/attack_hand(mob/living/user)//override as it should not create anything
 	return
 
-/obj/structure/cult/functional/pylon/New()
-	START_PROCESSING(SSobj, src)
-	..()
-
 /obj/structure/cult/functional/pylon/Destroy()
 	STOP_PROCESSING(SSobj, src)
-	..()
+	return ..()
 
 /obj/structure/cult/functional/pylon/cult_conceal()
 	STOP_PROCESSING(SSobj, src)
@@ -241,9 +285,9 @@ GLOBAL_LIST_INIT(blacklisted_pylon_turfs, typecacheof(list(
 	if(last_heal <= world.time)
 		last_heal = world.time + heal_delay
 		for(var/mob/living/L in range(5, src))
-			if(iscultist(L) || iswizard(L) || isshade(L) || isconstruct(L))
+			if(IS_CULTIST(L) || iswizard(L) || isshade(L) || isconstruct(L))
 				if(L.health != L.maxHealth)
-					new /obj/effect/temp_visual/heal(get_turf(src), "#960000")
+					new /obj/effect/temp_visual/heal(get_turf(src), COLOR_HEALING_GREEN)
 
 					if(ishuman(L))
 						L.heal_overall_damage(1, 1, TRUE, FALSE, TRUE)
@@ -272,9 +316,9 @@ GLOBAL_LIST_INIT(blacklisted_pylon_turfs, typecacheof(list(
 
 		var/turf/T = safepick(validturfs)
 		if(T)
-			if(istype(T, /turf/simulated/floor))
+			if(isfloorturf(T))
 				T.ChangeTurf(/turf/simulated/floor/engine/cult)
-			if(istype(T, /turf/simulated/wall))
+			if(iswallturf(T))
 				T.ChangeTurf(/turf/simulated/wall/cult/artificer)
 		else
 			var/turf/simulated/floor/engine/cult/F = safepick(cultturfs)
@@ -299,15 +343,24 @@ GLOBAL_LIST_INIT(blacklisted_pylon_turfs, typecacheof(list(
 	selection_title = "Archives"
 	creation_message = "<span class='cultitalic'>You invoke the dark magic of the tomes creating a %ITEM%!</span>"
 	choosable_items = list("Shuttle Curse" = /obj/item/shuttle_curse, "Zealot's Blindfold" = /obj/item/clothing/glasses/hud/health/night/cultblind,
-							"Veil Shifter" = /obj/item/cult_shift) //Add void torch to veil shifter spawn
+							"Veil Shifter" = /obj/item/cult_shift, "Reality sunderer" = /obj/item/portal_amulet, "Blank Tarot Card" = /obj/item/blank_tarot_card)
+	mansus_conversion_path = /obj/item/codex_cicatrix
 
-/obj/structure/cult/functional/archives/New()
+/obj/structure/cult/functional/archives/get_choosable_items()
 	. = ..()
-	icon_state = SSticker.cultdat?.archives_icon_state
+
+	if(!SSticker.mode.cult_team?.unlocked_heretic_items[CRIMSON_MEDALLION_UNLOCKED])
+		return
+	. += "Crimson Medallion"
+	.["Crimson Medallion"] = /obj/item/clothing/neck/heretic_focus/crimson_medallion
+
+/obj/structure/cult/functional/archives/Initialize(mapload)
+	. = ..()
+	icon_state = GET_CULT_DATA(archives_icon_state, "archives")
 
 /obj/effect/gateway
 	name = "gateway"
-	desc = "You're pretty sure that the abyss is staring back"
+	desc = "You're pretty sure that the abyss is staring back."
 	icon = 'icons/obj/cult.dmi'
 	icon_state = "hole"
 	density = TRUE
@@ -322,5 +375,4 @@ GLOBAL_LIST_INIT(blacklisted_pylon_turfs, typecacheof(list(
 /obj/effect/gateway/Bumped(atom/movable/AM)
 	return
 
-/obj/effect/gateway/Crossed(atom/movable/AM, oldloc)
-	return
+#undef CULT_STRUCTURE_COOLDOWN

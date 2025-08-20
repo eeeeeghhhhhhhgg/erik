@@ -2,7 +2,7 @@
 	icon = 'icons/mob/sprite_accessories/ipc/ipc_face.dmi'
 	species_allowed = list("Machine")
 	glasses_over = 1
-	models_allowed = list("Bishop Cybernetics mtr.", "Hesphiastos Industries mtr.", "Morpheus Cyberkinetics", "Ward-Takahashi mtr.", "Xion Manufacturing Group mtr.", "Shellguard Munitions Monitor Series")
+	models_allowed = list("Bishop Cybernetics mtr.", "Hephaestus Industries mtr.", "Morpheus Cyberkinetics", "Ward-Takahashi mtr.", "Xion Manufacturing Group mtr.", "Shellguard Munitions Monitor Series")
 
 /datum/sprite_accessory/hair/ipc/ipc_screen_blank
 	name = "Blank IPC Screen"
@@ -88,52 +88,54 @@
 	name = "Glider IPC Screen"
 	icon_state = "gol_glider"
 
-/datum/sprite_accessory/hair/ipc/hesphiastos_alt_off
-	name = "Dark Hesphiastos Screen"
+/datum/sprite_accessory/hair/ipc/ipc_screen_smoking
+	name = "Smoking IPC Screen"
+	icon_state = "smoking"
+
+/datum/sprite_accessory/hair/ipc/ipc_screen_test
+	name = "Test IPC Screen"
+	icon_state = "test"
+
+/datum/sprite_accessory/hair/ipc/ipc_screen_music
+	name = "Music IPC screen"
+	icon_state = "music"
+
+/datum/sprite_accessory/hair/ipc/ipc_screen_waiting
+	name = "Waiting IPC screen"
+	icon_state = "waiting"
+
+/datum/sprite_accessory/hair/ipc/hephaestus_alt_off
+	name = "Dark Hephaestus Screen"
 	icon_state = "off"
-	models_allowed = list("Hesphiastos Industries alt.")
+	models_allowed = list("Hephaestus Industries alt.")
 
-/datum/sprite_accessory/hair/ipc/hesphiastos_alt_pink
-	name = "Pink Hesphiastos Screen"
+/datum/sprite_accessory/hair/ipc/hephaestus_alt_pink
+	name = "Pink Hephaestus Screen"
 	icon_state = "pink_hesp_alt"
-	models_allowed = list("Hesphiastos Industries alt.")
+	models_allowed = list("Hephaestus Industries alt.")
 
-/datum/sprite_accessory/hair/ipc/hesphiastos_alt_orange
-	name = "Orange Hesphiastos Screen"
+/datum/sprite_accessory/hair/ipc/hephaestus_alt_orange
+	name = "Orange Hephaestus Screen"
 	icon_state = "orange_hesp_alt"
-	models_allowed = list("Hesphiastos Industries alt.")
+	models_allowed = list("Hephaestus Industries alt.")
 
-/datum/sprite_accessory/hair/ipc/hesphiastos_alt_goggle
-	name = "Goggles Hesphiastos Screen"
+/datum/sprite_accessory/hair/ipc/hephaestus_alt_goggle
+	name = "Goggles Hephaestus Screen"
 	icon_state = "goggles_hesp_alt"
-	models_allowed = list("Hesphiastos Industries alt.")
+	models_allowed = list("Hephaestus Industries alt.")
 
-/datum/sprite_accessory/hair/ipc/hesphiastos_alt_scroll
-	name = "Scrolling Hesphiastos Screen"
+/datum/sprite_accessory/hair/ipc/hephaestus_alt_scroll
+	name = "Scrolling Hephaestus Screen"
 	icon_state = "scroll_hesp_alt"
-	models_allowed = list("Hesphiastos Industries alt.")
+	models_allowed = list("Hephaestus Industries alt.")
 
-/datum/sprite_accessory/hair/ipc/hesphiastos_alt_rgb
-	name = "RGB Hesphiastos Screen"
+/datum/sprite_accessory/hair/ipc/hephaestus_alt_rgb
+	name = "RGB Hephaestus Screen"
 	icon_state = "rgb_hesp_alt"
-	models_allowed = list("Hesphiastos Industries alt.")
+	models_allowed = list("Hephaestus Industries alt.")
 
-/datum/sprite_accessory/hair/ipc/hesphiastos_alt_rainbow
-	name = "Rainbow Hesphiastos Screen"
+/datum/sprite_accessory/hair/ipc/hephaestus_alt_rainbow
+	name = "Rainbow Hephaestus Screen"
 	icon_state = "rainbow_hesp_alt"
-	models_allowed = list("Hesphiastos Industries alt.")
+	models_allowed = list("Hephaestus Industries alt.")
 
-/datum/sprite_accessory/hair/ipc/fluff
-	fluff = 1
-
-/datum/sprite_accessory/hair/ipc/fluff/lumi_eyes //Lumi Fluff hair
-	name = "Lumi Eyes"
-	icon_state = "lumi_eyes"
-
-/datum/sprite_accessory/hair/ipc/fluff/lumi_music //Lumi Fluff hair
-	name = "Lumi Music"
-	icon_state = "lumi_music"
-
-/datum/sprite_accessory/hair/ipc/fluff/lumi_waiting //Lumi Fluff hair
-	name = "Lumi Waiting"
-	icon_state = "lumi_waiting"

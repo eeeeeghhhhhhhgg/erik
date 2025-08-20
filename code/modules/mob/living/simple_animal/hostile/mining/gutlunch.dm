@@ -1,11 +1,12 @@
 //Gutlunches, passive mods that devour blood and gibs
 /mob/living/simple_animal/hostile/asteroid/gutlunch
 	name = "gutlunch"
-	desc = "A scavenger that eats raw meat, often found alongside ash walkers. Produces a thick, nutritious milk."
+	desc = "A scavenger that eats raw meat, often found alongside ash walkers. Produces a thick, medicinally nutritious milk."
 	icon = 'icons/mob/lavaland/lavaland_monsters.dmi'
 	icon_state = "gutlunch"
 	icon_living = "gutlunch"
 	icon_dead = "gutlunch"
+	mob_biotypes = MOB_ORGANIC | MOB_BEAST
 	speak_emote = list("warbles", "quavers")
 	emote_hear = list("trills.")
 	emote_see = list("sniffs.", "burps.")
@@ -38,7 +39,10 @@
 	animal_species = /mob/living/simple_animal/hostile/asteroid/gutlunch
 	childtype = list(/mob/living/simple_animal/hostile/asteroid/gutlunch/grublunch = 100)
 
-	wanted_objects = list(/obj/effect/decal/cleanable/blood/gibs, /obj/item/organ/internal)
+	wanted_objects = list(/obj/effect/decal/cleanable/blood/gibs, /obj/item/organ/internal/eyes,
+										/obj/item/organ/internal/heart, /obj/item/organ/internal/lungs,
+										/obj/item/organ/internal/liver, /obj/item/organ/internal/kidneys,
+										/obj/item/organ/internal/appendix)
 	var/obj/item/udder/gutlunch/udder = null
 
 /mob/living/simple_animal/hostile/asteroid/gutlunch/Initialize(mapload)
@@ -54,12 +58,11 @@
 	if(udder.reagents.total_volume == udder.reagents.maximum_volume)
 		add_overlay("gl_full")
 
-/mob/living/simple_animal/hostile/asteroid/gutlunch/attackby(obj/item/O, mob/user, params)
+/mob/living/simple_animal/hostile/asteroid/gutlunch/item_interaction(mob/living/user, obj/item/O, list/modifiers)
 	if(stat == CONSCIOUS && istype(O, /obj/item/reagent_containers/glass))
 		udder.milkAnimal(O, user)
 		regenerate_icons()
-	else
-		return ..()
+		return ITEM_INTERACT_COMPLETE
 
 /mob/living/simple_animal/hostile/asteroid/gutlunch/CanAttack(atom/the_target) // Gutlunch-specific version of CanAttack to handle stupid stat_exclusive = true crap so we don't have to do it for literally every single simple_animal/hostile except the two that spawn in lavaland
 	if(isturf(the_target) || !the_target || the_target.type == /atom/movable/lighting_object) // bail out on invalids
@@ -94,16 +97,13 @@
 /obj/item/udder/gutlunch
 	name = "nutrient sac"
 
-/obj/item/udder/gutlunch/Initialize(mapload)
-	. = ..()
-	reagents = new(50)
-	reagents.my_atom = src
-
 /obj/item/udder/gutlunch/generateMilk()
 	if(prob(60))
 		reagents.add_reagent("cream", rand(2, 5))
 	if(prob(45))
-		reagents.add_reagent("salglu_solution", rand(2,5))
+		reagents.add_reagent("salglu_solution", rand(2, 5))
+	if(prob(30))
+		reagents.add_reagent("epinephrine", rand(2, 5))
 
 
 //Male gutlunch. They're smaller and more colorful!

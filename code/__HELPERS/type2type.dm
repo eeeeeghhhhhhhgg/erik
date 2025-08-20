@@ -1,63 +1,11 @@
 /*
  * Holds procs designed to change one type of value, into another.
  * Contains:
- *			hex2num & num2hex
  *			file2list
  *			angle2dir
  *			angle2text
  *			worldtime2text
  */
-
-//Returns an integer given a hex input
-/proc/hex2num(hex)
-	if(!(istext(hex)))
-		return
-
-	var/num = 0
-	var/power = 0
-	var/i = null
-	i = length(hex)
-	while(i > 0)
-		var/char = copytext(hex, i, i + 1)
-		switch(char)
-			if("0")
-				//Apparently, switch works with empty statements, yay! If that doesn't work, blame me, though. -- Urist
-			if("9", "8", "7", "6", "5", "4", "3", "2", "1")
-				num += text2num(char) * 16 ** power
-			if("a", "A")
-				num += 16 ** power * 10
-			if("b", "B")
-				num += 16 ** power * 11
-			if("c", "C")
-				num += 16 ** power * 12
-			if("d", "D")
-				num += 16 ** power * 13
-			if("e", "E")
-				num += 16 ** power * 14
-			if("f", "F")
-				num += 16 ** power * 15
-			else
-				return
-		power++
-		i--
-	return num
-
-//Returns the hex value of a number given a value assumed to be a base-ten value
-/proc/num2hex(num, placeholder)
-	if(!isnum(num)) return
-	if(placeholder == null) placeholder = 2
-
-	var/hex = ""
-	while(num)
-		var/val = num % 16
-		num = round(num / 16)
-
-		if(val > 9)
-			val = ascii2text(55 + val) // 65 - 70 correspond to "A" - "F"
-		hex = "[val][hex]"
-	while(length(hex) < placeholder)
-		hex = "0[hex]"
-	return hex || "0"
 
 //Returns an integer value for R of R/G/B given a hex color input.
 /proc/color2R(hex)
@@ -87,20 +35,14 @@
 	return num_list
 
 //Splits the text of a file at seperator and returns them in a list.
-/proc/file2list(filename, seperator="\n")
-	return splittext(return_file_text(filename),seperator)
-
-
-//Turns a direction into text
-
-/proc/num2dir(direction)
-	switch(direction)
-		if(1.0) return NORTH
-		if(2.0) return SOUTH
-		if(4.0) return EAST
-		if(8.0) return WEST
-		else
-			log_runtime(EXCEPTION("UNKNOWN DIRECTION: [direction]"))
+/proc/file2list(filename, separator = "\n", no_empty = TRUE)
+	var/list/result = list()
+	for(var/line in splittext(return_file_text(filename), separator))
+		var/text = trim(line)
+		if(no_empty && !text)
+			continue
+		result += text
+	return result
 
 /proc/dir2text(direction)
 	switch(direction)
@@ -120,8 +62,6 @@
 			return "northwest"
 		if(10.0)
 			return "southwest"
-		else
-	return
 
 //Turns text into proper directions
 /proc/text2dir(direction)
@@ -142,12 +82,10 @@
 			return 6
 		if("SOUTHWEST")
 			return 10
-		else
-	return
 
 //Converts an angle (degrees) into an ss13 direction
-/proc/angle2dir(var/degree)
-	degree = ((degree+22.5)%365)
+/proc/angle2dir(degree)
+	degree = (degree + 22.5) % 360
 	if(degree < 45)		return NORTH
 	if(degree < 90)		return NORTHEAST
 	if(degree < 135)	return EAST
@@ -170,7 +108,7 @@
 
 //returns the north-zero clockwise angle in degrees, given a direction
 
-/proc/dir2angle(var/D)
+/proc/dir2angle(D)
 	switch(D)
 		if(NORTH)		return 0
 		if(SOUTH)		return 180
@@ -183,7 +121,7 @@
 		else			return null
 
 //Returns the angle in english
-/proc/angle2text(var/degree)
+/proc/angle2text(degree)
 	return dir2text(angle2dir(degree))
 
 //Converts a blend_mode constant to one acceptable to icon.Blend()
@@ -213,7 +151,8 @@
 	if(rights & R_MOD)			. += "[seperator]+MODERATOR"
 	if(rights & R_MENTOR)		. += "[seperator]+MENTOR"
 	if(rights & R_VIEWRUNTIMES)	. += "[seperator]+VIEWRUNTIMES"
-	return .
+	if(rights & R_MAINTAINER)	. += "[seperator]+MAINTAINER"
+	if(rights & R_DEV_TEAM)		. += "[seperator]+DEV_TEAM"
 
 /proc/ui_style2icon(ui_style)
 	switch(ui_style)
@@ -227,6 +166,8 @@
 			return 'icons/mob/screen_operative.dmi'
 		if("White")
 			return 'icons/mob/screen_white.dmi'
+		if("Midnight")
+			return 'icons/mob/screen_midnight.dmi'
 		else
 			return 'icons/mob/screen_midnight.dmi'
 
@@ -281,7 +222,7 @@
 	if(3*hue < 2)	return (a+(b-a)*((2/3)-hue)*6)
 	return a
 
-/proc/num2septext(var/theNum, var/sigFig = 7,var/sep=",") // default sigFig (1,000,000)
+/proc/num2septext(theNum, sigFig = 7, sep=",") // default sigFig (1,000,000)
 	var/finalNum = num2text(theNum, sigFig)
 
 	// Start from the end, or from the decimal point
@@ -308,7 +249,7 @@
 /proc/heat2color_g(temp)
 	temp /= 100
 	if(temp <= 66)
-		. = max(0, min(255, 99.4708025861 * log(temp) - 161.1195681661))
+		. = max(0, min(255, 99.4708025861 * log(max(temp, 1)) - 161.1195681661))
 	else
 		. = max(0, min(255, 288.1221695283 * ((temp - 60) ** -0.0755148492)))
 
@@ -320,10 +261,10 @@
 		if(temp <= 16)
 			. = 0
 		else
-			. = max(0, min(255, 138.5177312231 * log(temp - 10) - 305.0447927307))
+			. = max(0, min(255, 138.5177312231 * log(max(temp - 10, 1)) - 305.0447927307))
 
 //Argument: Give this a space-separated string consisting of 6 numbers. Returns null if you don't
-/proc/text2matrix(var/matrixtext)
+/proc/text2matrix(matrixtext)
 	var/list/matrixtext_list = splittext(matrixtext, " ")
 	var/list/matrix_list = list()
 	for(var/item in matrixtext_list)
@@ -331,7 +272,7 @@
 		if(entry == null)
 			return null
 		matrix_list += entry
-	if(matrix_list.len < 6)
+	if(length(matrix_list) < 6)
 		return null
 	var/a = matrix_list[1]
 	var/b = matrix_list[2]
@@ -351,7 +292,7 @@
 //The string is well, obviously the string being checked
 //The datum is used as a source for var names, to check validity
 //Otherwise every single word could technically be a variable!
-/proc/string2listofvars(var/t_string, var/datum/var_source)
+/proc/string2listofvars(t_string, datum/var_source)
 	if(!t_string || !var_source)
 		return list()
 
@@ -385,10 +326,65 @@
 		switch(child)
 			if(/datum)
 				return null
-			if(/obj || /mob)
+			if(/obj, /mob)
 				return /atom/movable
-			if(/area || /turf)
+			if(/area, /turf)
 				return /atom
 			else
 				return /datum
 	return text2path(copytext(string_type, 1, last_slash))
+
+/proc/text2bool(input)
+	if(input == "true")
+		return TRUE
+	return FALSE //
+
+/// Turns a Body_parts_covered bitfield into a list of organ/limb names.
+/proc/cover_flags2body_zones(bpc)
+	var/list/covered_parts = list()
+
+	if(!bpc)
+		return 0
+
+	if(bpc == FULL_BODY)
+		covered_parts |= list(BODY_ZONE_L_ARM,BODY_ZONE_R_ARM,BODY_ZONE_HEAD,BODY_ZONE_CHEST,BODY_ZONE_L_LEG,BODY_ZONE_R_LEG)
+
+	else
+		if(bpc & HEAD)
+			covered_parts |= list(BODY_ZONE_HEAD)
+		if(bpc & UPPER_TORSO || bpc & LOWER_TORSO)
+			covered_parts |= list(BODY_ZONE_CHEST)
+
+		if(bpc & ARMS)
+			covered_parts |= list(BODY_ZONE_L_ARM,BODY_ZONE_R_ARM)
+		else
+			if(bpc & ARM_LEFT)
+				covered_parts |= list(BODY_ZONE_L_ARM)
+			if(bpc & ARM_RIGHT)
+				covered_parts |= list(BODY_ZONE_R_ARM)
+
+		if(bpc & HANDS)
+			covered_parts |= list(BODY_ZONE_L_ARM,BODY_ZONE_R_ARM)
+		else
+			if(bpc & HAND_LEFT)
+				covered_parts |= list(BODY_ZONE_L_ARM)
+			if(bpc & HAND_RIGHT)
+				covered_parts |= list(BODY_ZONE_R_ARM)
+
+		if(bpc & LEGS)
+			covered_parts |= list(BODY_ZONE_L_LEG,BODY_ZONE_R_LEG)
+		else
+			if(bpc & LEG_LEFT)
+				covered_parts |= list(BODY_ZONE_L_LEG)
+			if(bpc & LEG_RIGHT)
+				covered_parts |= list(BODY_ZONE_R_LEG)
+
+		if(bpc & FEET)
+			covered_parts |= list(BODY_ZONE_L_LEG,BODY_ZONE_R_LEG)
+		else
+			if(bpc & FOOT_LEFT)
+				covered_parts |= list(BODY_ZONE_L_LEG)
+			if(bpc & FOOT_RIGHT)
+				covered_parts |= list(BODY_ZONE_R_LEG)
+
+	return covered_parts

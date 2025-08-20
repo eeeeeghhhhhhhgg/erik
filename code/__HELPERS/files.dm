@@ -1,3 +1,24 @@
+// Security helpers to ensure you cant arbitrarily load stuff from disk
+/proc/wrap_file(filepath)
+	if(IsAdminAdvancedProcCall())
+		// Admins shouldnt fuck with this
+		to_chat(usr, "<span class='boldannounceooc'>File load blocked: Advanced ProcCall detected.</span>")
+		message_admins("[key_name(usr)] attempted to load files via advanced proc-call")
+		log_admin("[key_name(usr)] attempted to load files via advanced proc-call")
+		return
+
+	return file(filepath)
+
+/proc/wrap_file2text(filepath)
+	if(IsAdminAdvancedProcCall())
+		// Admins shouldnt fuck with this
+		to_chat(usr, "<span class='boldannounceooc'>File load blocked: Advanced ProcCall detected.</span>")
+		message_admins("[key_name(usr)] attempted to load files via advanced proc-call")
+		log_admin("[key_name(usr)] attempted to load files via advanced proc-call")
+		return
+
+	return file2text(filepath)
+
 //checks if a file exists and contains text
 //returns text as a string if these conditions are met
 /proc/return_file_text(filename)
@@ -5,19 +26,14 @@
 		error("File not found ([filename])")
 		return
 
-	var/text = file2text(filename)
+	var/text = wrap_file2text(filename)
 	if(!text)
 		error("File empty ([filename])")
 		return
 
 	return text
 
-//Sends resource files to client cache
-/client/proc/getFiles()
-	for(var/file in args)
-		src << browse_rsc(file)
-
-/client/proc/browse_files(root="data/logs/", max_iterations=10, list/valid_extensions=list(".txt",".log",".htm"))
+/client/proc/browse_files(root="data/logs/", max_iterations=10, list/valid_extensions=list("txt", "log", "htm", "json"))
 	// wow why was this ever a parameter
 	root = "data/logs/"
 	var/path = root
@@ -39,8 +55,9 @@
 		if(copytext(path,-1,0) != "/")		//didn't choose a directory, no need to iterate again
 			break
 
-	var/extension = copytext(path,-4,0)
-	if( !fexists(path) || !(extension in valid_extensions) )
+	var/list/exploded = splittext(path, ".")
+	var/extension = exploded[length(exploded)]
+	if(!fexists(path) || !(extension in valid_extensions))
 		to_chat(src, "<font color='red'>Error: browse_files(): File not found/Invalid file([path]).</font>")
 		return
 
@@ -60,3 +77,18 @@
 	GLOB.fileaccess_timer = world.time + FTPDELAY
 	return 0
 #undef FTPDELAY
+
+/// Returns the md5 of a file at a given path.
+/proc/md5filepath(path)
+	. = md5(file(path))
+
+/// Save file as an external file then md5 it.
+/// Used because md5ing files stored in the rsc sometimes gives incorrect md5 results.
+/proc/md5asfile(file)
+	var/static/notch = 0
+	// Its importaint this code can handle md5filepath sleeping instead of hard blocking, if it's converted to use rust_g.
+	var/filename = "tmp/md5asfile.[world.realtime].[world.timeofday].[world.time].[world.tick_usage].[notch]"
+	notch = WRAP(notch+1, 0, 2**15)
+	fcopy(file, filename)
+	. = md5filepath(filename)
+	fdel(filename)

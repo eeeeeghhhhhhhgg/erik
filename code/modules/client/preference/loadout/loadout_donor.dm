@@ -1,7 +1,20 @@
+/*
+######################################################################################
+##																					##
+##								IMPORTANT README									##
+##																					##
+##	  Changing any /datum/gear typepaths --WILL-- break people's loadouts.			##
+##	The typepaths are stored directly in the `characters.gear` column of the DB.	##
+##		Please inform the server host if you wish to modify any of these.			##
+##																					##
+######################################################################################
+*/
+
+
 /datum/gear/donor
 	donator_tier = 2
 	sort_category = "Donor"
-	subtype_path = /datum/gear/donor
+	main_typepath = /datum/gear/donor
 
 /datum/gear/donor/furgloves
 	display_name = "Fur Gloves"
@@ -17,7 +30,7 @@
 
 /datum/gear/donor/furcape
 	display_name = "Fur Cape"
-	path = /obj/item/clothing/suit/furcape
+	path = /obj/item/clothing/neck/cloak/furcape
 
 /datum/gear/donor/furcoat
 	display_name = "Fur Coat"
@@ -63,9 +76,19 @@
 	display_name = "Fur Cap"
 	path = /obj/item/clothing/head/furcap
 
-/datum/gear/donor/mouse
-	display_name = "Mouse Headband"
-	path = /obj/item/clothing/head/kitty/mouse
+/datum/gear/donor/welding_blueflame
+	display_name = "Blue flame decal welding helmet"
+	path = /obj/item/clothing/head/welding/flamedecal/blue
+	allowed_roles = list("Chief Engineer", "Station Engineer", "Life Support Specialist", "Roboticist")
+	donator_tier = 2
+	cost = 2
+
+/datum/gear/donor/welding_white
+	display_name = "White decal welding helmet"
+	path = /obj/item/clothing/head/welding/white
+	allowed_roles = list("Chief Engineer", "Station Engineer", "Life Support Specialist", "Roboticist")
+	donator_tier = 2
+	cost = 2
 
 /datum/gear/donor/fawkes
 	display_name = "Guy Fawkes mask"

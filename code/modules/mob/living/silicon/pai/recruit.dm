@@ -1,24 +1,16 @@
 // Recruiting observers to play as pAIs
 
-GLOBAL_DATUM_INIT(paiController, /datum/paiController, new) // Global handler for pAI candidates
+GLOBAL_DATUM_INIT(paiController, /datum/pai_controller, new) // Global handler for pAI candidates
 
-/datum/paiCandidate
-	var/name
-	var/key
-	var/description
-	var/role
-	var/comments
-	var/ready = 0
-
-/datum/paiController
+/datum/pai_controller
 	var/list/pai_candidates = list()
 	var/list/asked = list()
 
 	var/askDelay = 10 * 60 * 1	// One minute [ms * sec * min]
 
-/datum/paiController/Topic(href, href_list[])
+/datum/pai_controller/Topic(href, href_list[])
 
-	var/datum/paiCandidate/candidate = locateUID(href_list["candidate"])
+	var/datum/pai_save/candidate = locateUID(href_list["candidate"])
 
 	if(candidate)
 		if(!istype(candidate))
@@ -30,22 +22,22 @@ GLOBAL_DATUM_INIT(paiController, /datum/paiController, new) // Global handler fo
 		var/obj/item/paicard/card = locate(href_list["device"])
 		if(card.pai)
 			return
+		if(!isobserver(candidate.owner.mob)) //This stops pais from being downloaded twice.
+			to_chat(usr, "<span class='warning'>Error downloading pAI from NT_NET. Please check if the pAI listing is still available.</span>")
+			return
 		if(usr.incapacitated() || isobserver(usr) || !card.Adjacent(usr))
 			return
-		if(istype(card, /obj/item/paicard) && istype(candidate, /datum/paiCandidate))
+		if(istype(card, /obj/item/paicard) && istype(candidate, /datum/pai_save))
 			var/mob/living/silicon/pai/pai = new(card)
-			if(!candidate.name)
+			if(!candidate.pai_name)
 				pai.name = pick(GLOB.ninja_names)
 			else
-				pai.name = candidate.name
+				pai.name = candidate.pai_name
 			pai.real_name = pai.name
-			pai.key = candidate.key
+			pai.key = candidate.owner.ckey
 
 			card.setPersonality(pai)
 			card.looking_for_personality = 0
-
-			SSticker.mode.update_cult_icons_removed(card.pai.mind)
-			SSticker.mode.update_rev_icons_removed(card.pai.mind)
 
 			pai_candidates -= candidate
 			usr << browse(null, "window=findPai")
@@ -55,7 +47,7 @@ GLOBAL_DATUM_INIT(paiController, /datum/paiController, new) // Global handler fo
 		var/mob/dead/observer/O = locate(href_list["signup"])
 		if(!O)
 			return
-		if(!(O in GLOB.respawnable_list))
+		if(!HAS_TRAIT(O, TRAIT_RESPAWNABLE))
 			to_chat(O, "You've given up your ability to respawn!")
 			return
 		if(!check_recruit(O))
@@ -64,7 +56,7 @@ GLOBAL_DATUM_INIT(paiController, /datum/paiController, new) // Global handler fo
 		return
 
 	if(candidate)
-		if(candidate.key && usr.key && candidate.key != usr.key)
+		if(candidate.owner.ckey && usr.ckey && candidate.owner.ckey != usr.ckey)
 			message_admins("Warning: possible href exploit by [key_name_admin(usr)] (paiController/Topic, candidate and usr have different keys)")
 			log_debug("Warning: possible href exploit by [key_name(usr)] (paiController/Topic, candidate and usr have different keys)")
 			return
@@ -75,38 +67,47 @@ GLOBAL_DATUM_INIT(paiController, /datum/paiController, new) // Global handler fo
 
 		switch(option)
 			if("name")
-				t = input("Enter a name for your pAI", "pAI Name", candidate.name) as text
-				if(t)
-					candidate.name = sanitize(copytext(t,1,MAX_NAME_LEN))
+				t = tgui_input_text(usr, "Enter a name for your pAI", "pAI Name", candidate.pai_name, MAX_NAME_LEN)
+				if(!t)
+					return
+				candidate.pai_name = t
+
 			if("desc")
-				t = input("Enter a description for your pAI", "pAI Description", candidate.description) as message
-				if(t)
-					candidate.description = sanitize(copytext(t,1,MAX_MESSAGE_LEN))
+				t = tgui_input_text(usr, "Enter a description for your pAI", "pAI Description", candidate.description, multiline = TRUE)
+				if(!t)
+					return
+				candidate.description = t
+
 			if("role")
-				t = input("Enter a role for your pAI", "pAI Role", candidate.role) as text
-				if(t)
-					candidate.role = sanitize(copytext(t,1,MAX_MESSAGE_LEN))
+				t = tgui_input_text(usr, "Enter a role for your pAI", "pAI Role", candidate.role)
+				if(!t)
+					return
+				candidate.role = t
+
 			if("ooc")
-				t = input("Enter any OOC comments", "pAI OOC Comments", candidate.comments) as message
-				if(t)
-					candidate.comments = sanitize(copytext(t,1,MAX_MESSAGE_LEN))
+				t = tgui_input_text(usr, "Enter any OOC comments", "pAI OOC Comments", candidate.ooc_comments, multiline = TRUE)
+				if(!t)
+					return
+				candidate.ooc_comments = t
+
 			if("save")
-				candidate.savefile_save(usr)
-			if("load")
-				candidate.savefile_load(usr)
+				candidate.save_to_db(usr)
+
+			if("reload")
+				candidate.reload_save(usr)
 				//In case people have saved unsanitized stuff.
-				if(candidate.name)
-					candidate.name = sanitize(copytext(candidate.name,1,MAX_NAME_LEN))
+				if(candidate.pai_name)
+					candidate.pai_name = sanitize(copytext_char(candidate.pai_name, 1, MAX_NAME_LEN))
 				if(candidate.description)
-					candidate.description = sanitize(copytext(candidate.description,1,MAX_MESSAGE_LEN))
+					candidate.description = sanitize(copytext_char(candidate.description, 1, MAX_MESSAGE_LEN))
 				if(candidate.role)
-					candidate.role = sanitize(copytext(candidate.role,1,MAX_MESSAGE_LEN))
-				if(candidate.comments)
-					candidate.comments = sanitize(copytext(candidate.comments,1,MAX_MESSAGE_LEN))
+					candidate.role = sanitize(copytext_char(candidate.role, 1, MAX_MESSAGE_LEN))
+				if(candidate.ooc_comments)
+					candidate.ooc_comments = sanitize(copytext_char(candidate.ooc_comments, 1, MAX_MESSAGE_LEN))
 
 			if("submit")
 				if(candidate)
-					candidate.ready = 1
+					GLOB.paiController.pai_candidates |= candidate
 					for(var/obj/item/paicard/p in world)
 						if(p.looking_for_personality == 1)
 							p.alertUpdate()
@@ -114,18 +115,8 @@ GLOBAL_DATUM_INIT(paiController, /datum/paiController, new) // Global handler fo
 				return
 		recruitWindow(usr)
 
-/datum/paiController/proc/recruitWindow(var/mob/M as mob)
-	var/datum/paiCandidate/candidate
-	for(var/datum/paiCandidate/c in pai_candidates)
-		if(!istype(c) || !istype(M))
-			break
-		if(c.key == M.key)
-			candidate = c
-	if(!candidate)
-		candidate = new /datum/paiCandidate()
-		candidate.key = M.key
-		pai_candidates.Add(candidate)
-
+/datum/pai_controller/proc/recruitWindow(mob/M)
+	var/datum/pai_save/candidate = M.client.pai_save
 
 	var/dat = ""
 	dat += {"
@@ -194,7 +185,7 @@ GLOBAL_DATUM_INIT(paiController, /datum/paiController, new) // Global handler fo
 		<table>
 			<tr class="d0">
 				<th rowspan="2"><a href='byond://?src=[UID()];option=name;new=1;candidate=[candidate.UID()]'>Name</a>:</th>
-				<td class="desc">[candidate.name]&nbsp;</td>
+				<td class="desc">[candidate.pai_name]&nbsp;</td>
 			</tr>
 			<tr class="d1">
 				<td>What you plan to call yourself. Suggestions: Any character name you would choose for a station character OR an AI.</td>
@@ -215,7 +206,7 @@ GLOBAL_DATUM_INIT(paiController, /datum/paiController, new) // Global handler fo
 			</tr>
 			<tr class="d0">
 				<th rowspan="2"><a href='byond://?src=[UID()];option=ooc;new=1;candidate=[candidate.UID()]'>OOC Comments</a>:</th>
-				<td class="desc">[candidate.comments]&nbsp;</td>
+				<td class="desc">[candidate.ooc_comments]&nbsp;</td>
 			</tr>
 			<tr class="d1">
 				<td>Anything you'd like to address specifically to the player reading this in an OOC manner. \"I prefer more serious RP.\", \"I'm still learning the interface!\", etc. Feel free to leave this blank if you want.</td>
@@ -230,7 +221,7 @@ GLOBAL_DATUM_INIT(paiController, /datum/paiController, new) // Global handler fo
 			</tr>
 			<tr>
 				<td class="button">
-					<a href='byond://?src=[UID()];option=load;new=1;candidate=[candidate.UID()]' class="button">Load Personality</a>
+					<a href='byond://?src=[UID()];option=reload;new=1;candidate=[candidate.UID()]' class="button">Reload Personality</a>
 				</td>
 			</tr>
 		</table><br>
@@ -243,22 +234,21 @@ GLOBAL_DATUM_INIT(paiController, /datum/paiController, new) // Global handler fo
 
 	M << browse(dat, "window=paiRecruit;size=580x580;")
 
-/datum/paiController/proc/findPAI(var/obj/item/paicard/p, var/mob/user)
+/datum/pai_controller/proc/findPAI(obj/item/paicard/p, mob/user)
 	requestRecruits(p, user)
 	var/list/available = list()
-	for(var/datum/paiCandidate/c in GLOB.paiController.pai_candidates)
-		if(c.ready)
-			var/found = 0
-			for(var/mob/o in GLOB.respawnable_list)
-				if(o.key == c.key)
-					found = 1
-			if(found)
-				available.Add(c)
+	for(var/datum/pai_save/c in GLOB.paiController.pai_candidates)
+		var/found = 0
+		for(var/mob/dead/observer/o in GLOB.player_list)
+			if(o.ckey == c.owner.ckey)
+				found = 1
+		if(found)
+			available.Add(c)
 	var/dat = ""
 
 	dat += {"
 		<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">
-		<html>
+		<html><meta charset='utf-8'>
 			<head>
 				<style>
 					body {
@@ -325,12 +315,12 @@ GLOBAL_DATUM_INIT(paiController, /datum/paiController, new) // Global handler fo
 	"}
 	dat += "<p>Displaying available AI personalities from central database... If there are no entries, or if a suitable entry is not listed, check again later as more personalities may be added.</p>"
 
-	for(var/datum/paiCandidate/c in available)
+	for(var/datum/pai_save/c in available)
 		dat += {"
 				<table class="desc">
 					<tr class="d0">
 						<th>Name:</th>
-						<td>[c.name]</td>
+						<td>[c.pai_name]</td>
 					</tr>
 					<tr class="d1">
 						<th>Description:</th>
@@ -342,11 +332,11 @@ GLOBAL_DATUM_INIT(paiController, /datum/paiController, new) // Global handler fo
 					</tr>
 					<tr class="d1">
 						<th>OOC Comments:</th>
-						<td>[c.comments]</td>
+						<td>[c.ooc_comments]</td>
 					</tr>
 				</table>
 				<table class="download">
-					<td class="download"><a href='byond://?src=[UID()];download=1;candidate=[c.UID()];device=\ref[p]' class="button"><b>Download [c.name]</b></a>
+					<td class="download"><a href='byond://?src=[UID()];download=1;candidate=[c.UID()];device=\ref[p]' class="button"><b>Download [c.pai_name]</b></a>
 					</td>
 				</table>
 				<br>
@@ -359,38 +349,38 @@ GLOBAL_DATUM_INIT(paiController, /datum/paiController, new) // Global handler fo
 
 	user << browse(dat, "window=findPai")
 
-/datum/paiController/proc/requestRecruits(var/obj/item/paicard/P, mob/user)
+/datum/pai_controller/proc/requestRecruits(obj/item/paicard/P, mob/user)
 	for(var/mob/dead/observer/O in GLOB.player_list)
 		if(O.client && (ROLE_PAI in O.client.prefs.be_special))
 			if(player_old_enough_antag(O.client,ROLE_PAI))
 				if(check_recruit(O))
-					to_chat(O, "<span class='boldnotice'>A pAI card activated by [user.real_name] is looking for personalities. (<a href='?src=[O.UID()];jump=\ref[P]'>Teleport</a> | <a href='?src=[UID()];signup=\ref[O]'>Sign Up</a>)</span>")
+					to_chat(O, "<span class='boldnotice'>A pAI card activated by [user.real_name] is looking for personalities. (<a href='byond://?src=[O.UID()];jump=\ref[P]'>Teleport</a> | <a href='byond://?src=[UID()];signup=\ref[O]'>Sign Up</a>)</span>")
 					//question(O.client)
 
-/datum/paiController/proc/check_recruit(var/mob/dead/observer/O)
-	if(jobban_isbanned(O, ROLE_PAI) || jobban_isbanned(O,"nonhumandept"))
+/datum/pai_controller/proc/check_recruit(mob/dead/observer/O)
+	if(jobban_isbanned(O, ROLE_PAI) || jobban_isbanned(O, "nonhumandept"))
 		return 0
 	if(!player_old_enough_antag(O.client,ROLE_PAI))
 		return 0
-	if(cannotPossess(O))
+	if(!O.check_ahud_rejoin_eligibility())
 		return 0
-	if(!(O in GLOB.respawnable_list))
+	if(!HAS_TRAIT(O, TRAIT_RESPAWNABLE))
 		return 0
 	if(O.client)
 		return 1
 	return 0
 
-/datum/paiController/proc/question(var/client/C)
+/datum/pai_controller/proc/question(client/C)
 	spawn(0)
 		if(!C)	return
 		asked.Add(C.key)
 		asked[C.key] = world.time
-		var/response = alert(C, "Someone is requesting a pAI personality. Would you like to play as a personal AI?", "pAI Request", "Yes", "No", "Never for this round")
+		var/response = tgui_alert(C, "Someone is requesting a pAI personality. Would you like to play as a personal AI?", "pAI Request", list("Yes", "No", "Never for this round"))
 		if(!C)	return		//handle logouts that happen whilst the alert is waiting for a response.
 		if(response == "Yes")
 			recruitWindow(C.mob)
 		else if(response == "Never for this round")
-			var/warning = alert(C, "Are you sure? This action will be undoable and you will need to wait until next round.", "You sure?", "Yes", "No")
+			var/warning = tgui_alert(C, "Are you sure? This action will be undoable and you will need to wait until next round.", "You sure?", list("Yes", "No"))
 			if(warning == "Yes")
 				asked[C.key] = INFINITY
 			else

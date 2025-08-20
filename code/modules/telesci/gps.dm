@@ -1,103 +1,168 @@
 GLOBAL_LIST_EMPTY(GPS_list)
+
+#define EMP_DISABLE_TIME 30 SECONDS
+
+/**
+  * # GPS
+  *
+  * A small item that reports its current location. Has a tag to help distinguish between them.
+  */
 /obj/item/gps
 	name = "default gps"
 	desc = "Helping lost spacemen find their way through the planets since 2016."
 	icon = 'icons/obj/telescience.dmi'
 	icon_state = "gps-c"
 	w_class = WEIGHT_CLASS_SMALL
-	slot_flags = SLOT_BELT
+	slot_flags = ITEM_SLOT_BELT
 	origin_tech = "materials=2;magnets=1;bluespace=2"
-	var/gpstag = "COM0"
-	var/emped = 0
-	var/turf/locked_location
+	/// Whether the GPS is on.
 	var/tracking = TRUE
-	var/local = FALSE	//local gps show up only to gps on same z level
+	/// The tag that is visible to other GPSes.
+	var/gpstag = "COM0"
+	/// Whether to only list signals that are on the same Z-level.
+	var/same_z = FALSE
+	/// Whether the GPS should only show up to GPSes on the same Z-level.
+	var/local = FALSE
+	/// Whether the GPS is EMPed, disabling it temporarily.
+	var/emped = FALSE
+	/// Turf reference. If set, it will appear in the UI. Used by [/obj/machinery/computer/telescience].
+	var/turf/locked_location
 
-/obj/item/gps/New()
-	..()
+/obj/item/gps/Initialize(mapload)
+	. = ..()
 	GLOB.GPS_list.Add(src)
 	GLOB.poi_list.Add(src)
-	if(name == "default gps")	//use default naming scheme
+	if(name == initial(name))
 		name = "global positioning system ([gpstag])"
-	overlays += "working"
+	update_icon(UPDATE_OVERLAYS)
 
 /obj/item/gps/Destroy()
 	GLOB.GPS_list.Remove(src)
 	GLOB.poi_list.Remove(src)
 	return ..()
 
+/obj/item/gps/update_overlays()
+	. = ..()
+	if(emped)
+		. += "emp"
+	else if(tracking)
+		. += "working"
+
+/obj/item/gps/pickup(mob/user)
+	..()
+	ADD_TRAIT(user, TRAIT_HAS_GPS, "GPS[UID()]")
+
+/obj/item/gps/dropped(mob/user, silent)
+	REMOVE_TRAIT(user, TRAIT_HAS_GPS, "GPS[UID()]")
+	REMOVE_TRAIT(user, TRAIT_CAN_VIEW_HEALTH, "HEALTH[UID()]")
+	return ..()
+
 /obj/item/gps/emp_act(severity)
-	emped = 1
-	overlays -= "working"
-	overlays += "emp"
-	addtimer(CALLBACK(src, .proc/reboot), 300)
+	emped = TRUE
+	update_icon(UPDATE_OVERLAYS)
+	addtimer(CALLBACK(src, PROC_REF(reboot)), EMP_DISABLE_TIME)
 
-/obj/item/gps/proc/reboot()
-	emped = FALSE
-	overlays -= "emp"
-	overlays += "working"
-
-/obj/item/gps/AltClick(mob/user)
-	if(CanUseTopic(user, GLOB.inventory_state) != STATUS_INTERACTIVE)
-		return 1 //user not valid to use gps
+/obj/item/gps/AltClick(mob/user, state)
+	if(ui_status(user, state) != UI_INTERACTIVE)
+		return //user not valid to use gps
 	if(emped)
 		to_chat(user, "<span class='warning'>It's busted!</span>")
-	if(tracking)
-		overlays -= "working"
-		to_chat(user, "[src] is no longer tracking, or visible to other GPS devices.")
-		tracking = FALSE
-	else
-		overlays += "working"
-		to_chat(user, "[src] is now tracking, and visible to other GPS devices.")
-		tracking = TRUE
-
-/obj/item/gps/attack_self(mob/user as mob)
-	if(!tracking)
-		to_chat(user, "<span class='warning'>[src] is turned off. Use alt+click to toggle it back on.</span>")
 		return
 
-	var/obj/item/gps/t = ""
-	var/gps_window_height = 110 + GLOB.GPS_list.len * 20 // Variable window height, depending on how many GPS units there are to show
-	if(emped)
-		t += "ERROR"
+	tracking = !tracking
+	update_icon(UPDATE_OVERLAYS)
+	if(tracking)
+		to_chat(user, "[src] is now tracking, and visible to other GPS devices.")
 	else
-		t += "<BR><A href='?src=[UID()];tag=1'>Set Tag</A> "
-		t += "<BR>Tag: [gpstag]"
-		if(locked_location && locked_location.loc)
-			t += "<BR>Bluespace coordinates saved: [locked_location.loc]"
-			gps_window_height += 20
+		to_chat(user, "[src] is no longer tracking, or visible to other GPS devices.")
+	SStgui.update_uis(src)
 
-		var/turf/own_pos = get_turf(src)
-		var/own_z = own_pos.z
-		for(var/obj/item/gps/G in GLOB.GPS_list)
-			var/turf/pos = get_turf(G)
-			var/area/gps_area = get_area(G)
-			var/tracked_gpstag = G.gpstag
-			if(G.emped == 1)
-				t += "<BR>[tracked_gpstag]: ERROR"
-			else if(G.tracking && (!G.local || (own_z == pos.z)))
-				t += "<BR>[tracked_gpstag]: [format_text(gps_area.name)] ([pos.x], [pos.y], [pos.z])"
-			else
-				continue
+/obj/item/gps/ui_data(mob/user)
+	var/list/data = list()
+	if(emped)
+		data["emped"] = TRUE
+		return data
 
-	var/datum/browser/popup = new(user, "GPS", name, 360, min(gps_window_height, 800))
-	popup.set_content(t)
-	popup.set_title_image(user.browse_rsc_icon(src.icon, src.icon_state))
-	popup.open()
+	// General
+	data["active"] = tracking
+	data["tag"] = gpstag
+	data["same_z"] = same_z
+	if(!tracking)
+		return data
+	var/turf/T = get_turf(src)
+	data["area"] = get_area_name(src, TRUE)
+	data["position"] = ATOM_COORDS(T)
 
-/obj/item/gps/Topic(href, href_list)
+	// Saved location
+	if(locked_location)
+		data["saved"] = ATOM_COORDS(locked_location)
+	else
+		data["saved"] = null
+
+	// GPS signals
+	var/signals = list()
+	for(var/g in GLOB.GPS_list)
+		var/obj/item/gps/G = g
+		var/turf/GT = get_turf(G)
+		if(isnull(GT) || !G.tracking || G == src)
+			continue
+		if((G.local || same_z) && (GT.z != T.z))
+			continue
+
+		var/list/signal = list("tag" = G.gpstag, "area" = null, "position" = null)
+		if(!G.emped)
+			signal["area"] = get_area_name(G, TRUE)
+			signal["position"] = ATOM_COORDS(GT)
+		signals += list(signal)
+	data["signals"] = signals
+
+	return data
+
+/obj/item/gps/attack_self__legacy__attackchain(mob/user)
+	ui_interact(user)
+
+/obj/item/gps/ui_state(mob/user)
+	return GLOB.inventory_state
+
+/obj/item/gps/ui_interact(mob/user, datum/tgui/ui = null)
+	ui = SStgui.try_update_ui(user, src, ui)
+	if(!ui)
+		ui = new(user, src, "GPS", "GPS")
+		ui.open()
+
+/obj/item/gps/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	if(..())
-		return 1
+		return
 
-	if(href_list["tag"] )
-		var/tag = input("Please enter desired tag.", name, gpstag) as text|null
-		if(!tag || ..())
-			return TRUE
+	. = TRUE
+	switch(action)
+		if("tag")
+			var/newtag = params["newtag"] || ""
+			newtag = uppertext(paranoid_sanitize(copytext_char(newtag, 1, 5)))
+			if(!length(newtag) || gpstag == newtag)
+				return
+			gpstag = newtag
+			name = "global positioning system ([gpstag])"
+		if("toggle")
+			AltClick(usr, state)
+			return FALSE
+		if("same_z")
+			same_z = !same_z
+		else
+			return FALSE
 
-		tag = uppertext(sanitize(copytext(tag, 1, 5)))
-		gpstag = tag
-		name = "global positioning system ([gpstag])"
-		attack_self(usr)
+/**
+  * Turns off the GPS's EMPed state. Called automatically after an EMP.
+  */
+/obj/item/gps/proc/reboot()
+	emped = FALSE
+	update_icon(UPDATE_OVERLAYS)
+
+/obj/item/gps/security
+	icon_state = "gps-sec"
+	gpstag = "SEC0"
+	desc = "A positioning system helpful for monitoring prisoners that are implanted with a tracking implant."
+	local = TRUE
 
 /obj/item/gps/science
 	icon_state = "gps-s"
@@ -111,6 +176,15 @@ GLOBAL_LIST_EMPTY(GPS_list)
 	icon_state = "gps-m"
 	gpstag = "MINE0"
 	desc = "A positioning system helpful for rescuing trapped or injured miners, keeping one on you at all times while mining might just save your life."
+
+/obj/item/gps/mod
+	icon_state = "gps-m"
+	gpstag = "MOD0"
+	desc = "A positioning system helpful for rescuing trapped or injured miners, after you have become lost from rolling around at the speed of sound."
+	tracking = FALSE
+
+/obj/item/gps/mod/ui_state()
+	return GLOB.deep_inventory_state
 
 /obj/item/gps/cyborg
 	icon_state = "gps-b"
@@ -158,7 +232,7 @@ GLOBAL_LIST_EMPTY(GPS_list)
 		tagged |= T
 
 /obj/item/gps/visible_debug/proc/clear()
-	while(tagged.len)
+	while(length(tagged))
 		var/turf/T = pop(tagged)
 		T.color = initial(T.color)
 		T.maptext = initial(T.maptext)
@@ -169,3 +243,5 @@ GLOBAL_LIST_EMPTY(GPS_list)
 	tagged = null
 	STOP_PROCESSING(SSfastprocess, src)
 	. = ..()
+
+#undef EMP_DISABLE_TIME

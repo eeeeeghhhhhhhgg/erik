@@ -33,7 +33,7 @@
 
 /datum/design/paicard
 	name = "Personal Artificial Intelligence Card"
-	desc = "Allows for the construction of a pAI Card"
+	desc = "Allows for the construction of a pAI Card."
 	id = "paicard"
 	req_tech = list("programming" = 2)
 	build_type = PROTOLATHE
@@ -51,6 +51,27 @@
 	build_path = /obj/item/disk/tech_disk
 	category = list("Miscellaneous")
 
+/datum/design/backup_disk
+	name = "Technology Backup Disk"
+	desc = "Produce additional backup disks for storing technology data."
+	id = "backup_disk"
+	req_tech = list("programming" = 1)
+	build_type = PROTOLATHE | AUTOLATHE
+	materials = list(MAT_METAL = 300, MAT_GLASS = 100)
+	build_path = /obj/item/disk/rnd_backup_disk
+	category = list("Miscellaneous")
+
+
+/datum/design/training_disk
+	name = "Training Authentification Disk"
+	desc = "Replacement authentication disk for the nuclear training bomb."
+	id = "training_nad"
+	req_tech = list("programming" = 1)
+	build_type = PROTOLATHE | AUTOLATHE
+	materials = list(MAT_METAL = 300, MAT_GLASS = 100)
+	build_path = /obj/item/disk/nuclear/training
+	category = list("Miscellaneous")
+
 /datum/design/digital_camera
 	name = "Digital Camera"
 	desc = "Produce an enhanced version of the standard issue camera."
@@ -61,9 +82,19 @@
 	build_path = /obj/item/camera/digital
 	category = list("Miscellaneous")
 
+/datum/design/video_camera
+	name = "Video Camera"
+	desc = "Produce a video camera that can send live feed to the entertainment network."
+	id = "videocamera"
+	req_tech = list("programming" = 3, "materials" = 2)
+	build_type = PROTOLATHE
+	materials = list(MAT_METAL = 1000, MAT_GLASS = 500)
+	build_path = /obj/item/videocam
+	category = list("Miscellaneous")
+
 /datum/design/safety_muzzle
 	name = "Safety Muzzle"
-	desc = "Produce a lockable muzzle keyed to security ID cards"
+	desc = "Produce a lockable muzzle keyed to security ID cards."
 	id = "safetymuzzle"
 	req_tech = list("materials" = 1)
 	build_type = PROTOLATHE
@@ -98,7 +129,7 @@
 	req_tech = list("toxins" = 3)
 	build_type = PROTOLATHE
 	materials = list(MAT_METAL=500, MAT_GLASS=100)
-	build_path = /obj/item/tank/emergency_oxygen/empty
+	build_path = /obj/item/tank/internals/emergency_oxygen/empty
 	category = list("Miscellaneous")
 
 /datum/design/extended_oxygen
@@ -108,7 +139,7 @@
 	req_tech = list("toxins" = 4)
 	build_type = PROTOLATHE
 	materials = list(MAT_METAL=800, MAT_GLASS=100)
-	build_path = /obj/item/tank/emergency_oxygen/engi/empty
+	build_path = /obj/item/tank/internals/emergency_oxygen/engi/empty
 	category = list("Miscellaneous")
 
 /datum/design/double_oxygen
@@ -118,7 +149,7 @@
 	req_tech = list("toxins" = 5)
 	build_type = PROTOLATHE
 	materials = list(MAT_METAL=1500, MAT_GLASS=200)
-	build_path = /obj/item/tank/emergency_oxygen/double/empty
+	build_path = /obj/item/tank/internals/emergency_oxygen/double/empty
 	category = list("Miscellaneous")
 
 /datum/design/oxygen_tank
@@ -128,5 +159,5 @@
 	req_tech = list("toxins" = 5)
 	build_type = PROTOLATHE
 	materials = list(MAT_METAL=3000, MAT_GLASS=500)
-	build_path = /obj/item/tank/oxygen/empty
+	build_path = /obj/item/tank/internals/oxygen/empty
 	category = list("Miscellaneous")

@@ -8,9 +8,10 @@
 	icon_living = "base"
 	icon_dead = "base_dead"
 	icon_gib = "carp_gib"
+	mob_biotypes = MOB_ORGANIC | MOB_BEAST
 	speak_chance = 0
 	turns_per_move = 5
-	butcher_results = list(/obj/item/reagent_containers/food/snacks/carpmeat = 2)
+	butcher_results = list(/obj/item/food/carpmeat = 2)
 	response_help = "pets"
 	response_disarm = "gently pushes aside"
 	response_harm = "hits"
@@ -32,10 +33,12 @@
 	atmos_requirements = list("min_oxy" = 0, "max_oxy" = 0, "min_tox" = 0, "max_tox" = 0, "min_co2" = 0, "max_co2" = 0, "min_n2" = 0, "max_n2" = 0)
 	minbodytemp = 0
 	maxbodytemp = 1500
-	faction = list("carp")
-	flying = TRUE
+	faction = list("carp", "mining")
 	pressure_resistance = 200
 	gold_core_spawnable = HOSTILE_SPAWN
+	density = FALSE
+
+	initial_traits = list(TRAIT_FLYING, TRAIT_SHOCKIMMUNE)
 
 	var/random_color = TRUE //if the carp uses random coloring
 	var/rarechance = 1 //chance for rare color variant
@@ -64,6 +67,7 @@
 	. = ..()
 	carp_randomify(rarechance)
 	update_icons()
+	AddComponent(/datum/component/swarming)
 
 /mob/living/simple_animal/hostile/carp/proc/carp_randomify(rarechance)
 	if(random_color)
@@ -90,14 +94,14 @@
 	base_dead_overlay.appearance_flags = RESET_COLOR
 	add_overlay(base_dead_overlay)
 
-/mob/living/simple_animal/hostile/carp/Process_Spacemove(movement_dir = 0)
+/mob/living/simple_animal/hostile/carp/Process_Spacemove(movement_dir = 0, continuous_move = FALSE)
 	return TRUE	//No drifting in space for space carp!	//original comments do not steal
 
 /mob/living/simple_animal/hostile/carp/AttackingTarget()
 	. = ..()
 	if(. && ishuman(target))
 		var/mob/living/carbon/human/H = target
-		H.adjustStaminaLoss(8)
+		H.apply_damage(8, STAMINA)
 
 /mob/living/simple_animal/hostile/carp/death(gibbed)
 	. = ..()
@@ -118,12 +122,22 @@
 	else
 		add_dead_carp_overlay()
 
+// We do not want mobs moving through space carp, we as such we block it if the mob is not dense
+/mob/living/simple_animal/hostile/carp/CanPass(atom/movable/mover, border_dir)
+	if(isliving(mover) && !istype(mover, /mob/living/simple_animal/hostile/carp) && mover.density == TRUE && stat != DEAD)
+		return FALSE
+	return ..()
+
+// Since it's not dense we let it always hit
+/mob/living/simple_animal/hostile/carp/projectile_hit_check(obj/item/projectile/P)
+	return stat == DEAD
+
 /mob/living/simple_animal/hostile/carp/holocarp
 	icon_state = "holocarp"
 	icon_living = "holocarp"
 	maxbodytemp = INFINITY
 	gold_core_spawnable = NO_SPAWN
-	del_on_death = 1
+	del_on_death = TRUE
 	random_color = FALSE
 
 /mob/living/simple_animal/hostile/carp/megacarp
@@ -146,7 +160,7 @@
 
 	var/regen_cooldown = 0
 
-/mob/living/simple_animal/hostile/carp/megacarp/Initialize()
+/mob/living/simple_animal/hostile/carp/megacarp/Initialize(mapload)
 	. = ..()
 	name = "[pick(GLOB.megacarp_first_names)] [pick(GLOB.megacarp_last_names)]"
 	melee_damage_lower += rand(2, 10)
